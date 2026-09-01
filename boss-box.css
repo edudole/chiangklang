@@ -1,0 +1,218 @@
+/* Boss box — isolated styles */
+.left-info-stack{
+  position:absolute;
+  top:108px;
+  left:-285px;
+  width:255px;
+  z-index:20;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.boss-box{
+  width:255px;
+  border-radius:18px;
+  text-align:center;
+}
+
+.boss-box[hidden]{display:none !important;}
+
+.boss-photo-wrap {
+  width: 180px;
+  height: auto;
+  margin: 0 auto 14px;
+}
+
+.boss-photo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 15px;
+}
+
+.boss-name{
+  color:#111827;
+  font-size:18px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+
+.boss-position{
+  margin-top:4px;
+  color:#475569;
+  font-size:15px;
+  font-weight:600;
+  line-height:1.55;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:1450px){
+  .left-info-stack{
+    position:relative;
+    top:auto;
+    left:auto;
+    width:255px;
+    margin-top:108px;
+  }
+}
+
+@media(max-width:900px){
+  .left-info-stack{
+    order:2;
+    width:min(420px,100%);
+    margin:0 auto;
+  }
+  .boss-box{
+    width:100%;
+  }
+}
+
+/* Popup ประชาสัมพันธ์จากชีต boss */
+.boss-popup{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:34px;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+
+.boss-popup[hidden]{
+  display:none !important;
+}
+
+/* กล่องภายนอก ไม่ตัดปุ่มปิด */
+.boss-popup-dialog{
+  position:relative;
+  width:min(760px,92vw);
+  max-height:90vh;
+  overflow:visible;
+  background:#fff;
+  border-radius:24px;
+  box-shadow:0 28px 80px rgba(0,0,0,.42);
+  padding:12px 12px 24px;
+  animation:bossPopupIn .24s ease-out;
+  box-sizing:border-box;
+}
+
+/* รูปไม่ให้ล้นจนเกิด scrollbar */
+.boss-popup-image{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:calc(90vh - 105px);
+  object-fit:contain;
+  border-radius:18px;
+  background:#f8fafc;
+}
+
+/* ปุ่มปิด แสดงเต็มวง */
+.boss-popup-close,
+#bossPopupClose{
+  position:absolute;
+  top:-22px;
+  right:-22px;
+  z-index:100;
+  width:52px;
+  height:52px;
+  padding:0;
+  border:4px solid #fff;
+  border-radius:50%;
+  background:#64748b;
+  color:#fff;
+  font-size:36px;
+  font-weight:400;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-sizing:border-box;
+  box-shadow:0 8px 22px rgba(0,0,0,.35);
+}
+
+.boss-popup-close:hover,
+#bossPopupClose:hover{
+  background:#475569;
+}
+
+.boss-popup-actions{
+  display:flex;
+  justify-content:center;
+  padding-top:18px;
+}
+
+.boss-popup-actions[hidden]{
+  display:none !important;
+}
+
+.boss-popup-detail{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:120px;
+  min-height:46px;
+  padding:10px 26px;
+  border-radius:999px;
+  background:#ff7967;
+  color:#fff;
+  font-size:16px;
+  font-weight:800;
+  text-decoration:none;
+  transition:transform .18s ease, filter .18s ease;
+}
+
+.boss-popup-detail:hover{
+  transform:translateY(-1px);
+  filter:brightness(.96);
+}
+
+body.boss-popup-open{
+  overflow:hidden;
+}
+
+@keyframes bossPopupIn{
+  from{
+    opacity:0;
+    transform:translateY(12px) scale(.97);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+@media(max-width:600px){
+  .boss-popup{
+    padding:26px 14px 14px;
+  }
+
+  .boss-popup-dialog{
+    width:100%;
+    max-height:92vh;
+    padding:8px 8px 18px;
+    border-radius:18px;
+  }
+
+  .boss-popup-image{
+    max-height:calc(92vh - 95px);
+    border-radius:13px;
+  }
+
+  .boss-popup-close,
+  #bossPopupClose{
+    top:-18px;
+    right:-6px;
+    width:44px;
+    height:44px;
+    border-width:3px;
+    font-size:30px;
+  }
+}

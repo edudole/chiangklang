@@ -1,0 +1,13 @@
+.admin-section-marker,.admin-section-hidden-message{display:none}
+
+body.admin-edit-mode section[data-admin-section]{position:relative;border-top:6px solid #ff001f!important;box-sizing:border-box}
+body.admin-edit-mode section[data-admin-section]>.admin-section-marker{position:absolute;z-index:9002;top:-6px;left:80%;display:grid;grid-template-columns:48px minmax(82px,auto) 48px;grid-template-rows:38px 42px;grid-template-areas:"eye title up" "eye number down";align-items:center;min-width:232px;min-height:92px;padding:6px 10px 9px;border-radius:0 0 14px 14px;background:#ff001f;color:#fff;box-shadow:0 10px 22px rgba(255,0,31,.28);font-family:"Kanit",sans-serif;text-align:center;transform:translateX(-50%)}
+.admin-section-marker-title{grid-area:title;font-size:18px;font-weight:800;line-height:1}.admin-section-marker-number{grid-area:number;font-size:48px;font-weight:800;line-height:.9}
+.admin-section-control{display:grid;place-items:center;width:35px;height:35px;padding:0;border:2px solid #fff;border-radius:50%;background:transparent;color:#fff;font-size:23px;cursor:pointer}.admin-section-control:hover{background:#fff;color:#dc001b}.admin-section-control:disabled{opacity:.35;cursor:not-allowed}.admin-section-eye{grid-area:eye;align-self:center}.admin-section-up{grid-area:up}.admin-section-down{grid-area:down}
+
+body.admin-edit-mode section[data-section-visible="false"]>*:not(.admin-section-marker):not(.admin-section-hidden-message){pointer-events:none!important;user-select:none;filter:grayscale(.5);opacity:.22}
+body.admin-edit-mode section[data-section-visible="false"]>.admin-section-hidden-message{position:absolute;z-index:9001;inset:0;display:grid;place-items:center;padding:110px 20px 30px;background:rgba(255,255,255,.10);color:#b91c1c;font:800 clamp(22px,3vw,38px)/1.25 "Kanit",sans-serif;text-align:center;pointer-events:auto}
+body:not(.admin-edit-mode) section[data-section-visible="false"]{display:none!important}
+.admin-section-save-status{position:fixed;z-index:100000;right:18px;bottom:18px;padding:10px 16px;border-radius:10px;background:#0f172a;color:#fff;font:600 14px "Kanit",sans-serif;box-shadow:0 8px 24px rgba(15,23,42,.25)}
+
+@media(max-width:760px){body.admin-edit-mode section[data-admin-section]{border-top-width:4px!important}body.admin-edit-mode section[data-admin-section]>.admin-section-marker{top:-4px;left:68%;grid-template-columns:38px 68px 38px;grid-template-rows:31px 35px;min-width:174px;min-height:76px;padding:5px 8px}.admin-section-marker-title{font-size:13px}.admin-section-marker-number{font-size:37px}.admin-section-control{width:33px;height:33px;font-size:18px}}
