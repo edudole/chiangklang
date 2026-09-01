@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="รายการผู้ใช้งาน Learning Platform 360">
+  <title>รายการ User | Learning Platform 360</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="user-all.css?v=20260818-1">
+</head>
+<body>
+  <main class="users-page">
+    <div class="users-container">
+      <div class="users-topbar">
+       <a class="users-back"
+   href="index.html"
+   onclick="return backToHome(event)">
+  ← กลับหน้าหลัก
+</a>
+      </div>
+
+      <header class="users-heading">
+        <h1>รายการ User</h1>
+        <span aria-hidden="true"></span>
+        <p>Learning Platform 360</p>
+      </header>
+
+      <section class="users-panel">
+        <div class="users-toolbar">
+          <div class="users-sort">📊 เรียงตามจำนวนการเข้าใช้</div>
+          <strong id="userCount">กำลังโหลด...</strong>
+          <div class="users-actions">
+            <label class="sr-only" for="userSearch">ค้นหาผู้ใช้งาน</label>
+            <input id="userSearch" type="search" placeholder="ค้นหาผู้ใช้งาน...">
+            <button id="userRefresh" class="users-refresh" type="button">↻ รีเฟรช</button>
+            <button id="userPrint" class="users-print" type="button">▣ ปริ้นท์</button>
+          </div>
+        </div>
+
+        <div id="usersStatus" class="users-status" role="status">
+          <span class="users-spinner" aria-hidden="true"></span>
+          <span>กำลังโหลดข้อมูล...</span>
+        </div>
+        <section id="usersGrid" class="users-grid" aria-live="polite"></section>
+      </section>
+    </div>
+  </main>
+<script src="user-all.js?v=20260818-1"></script>
+
+<script>
+function backToHome(event) {
+  event.preventDefault();
+
+  // เปิด user_all.html เป็นแท็บใหม่
+  if (window.opener && !window.opener.closed) {
+    window.close();
+    return false;
+  }
+
+  // เปิดในแท็บเดียวกัน
+  if (window.history.length > 1) {
+    window.history.back();
+    return false;
+  }
+
+  // เปิด user_all.html โดยตรง
+  window.location.href = 'index.html';
+  return false;
+}
+</script>
+
+</body>
+</html>
+

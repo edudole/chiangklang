@@ -1,0 +1,545 @@
+/* =====================================================
+   Learning Source Box — scoped, safe for existing website
+===================================================== */
+.lsb-section{padding:64px 0;background:#f7f9fc}
+.lsb-open-all{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:13px}
+.lsb-box{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:18px;padding:16px;border:1px solid #e2e8f0;border-radius:26px;background:#fff;box-shadow:0 18px 45px rgba(15,23,42,.10)}
+.lsb-map-panel,.lsb-slider-panel{min-width:0}
+.lsb-map-stage{position:relative;width:100%;aspect-ratio:16/10;min-height:380px;overflow:hidden;border-radius:19px;background:#e2e8f0}
+.lsb-map-image{display:block;width:100%;height:100%;object-fit:cover}
+.lsb-markers{position:absolute;inset:0;z-index:3;pointer-events:none}
+.lsb-marker{position:absolute;z-index:5;width:30px;height:38px;padding:0;border:0;background:transparent;color:var(--lsb-marker,#ef4444);transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;filter:drop-shadow(0 4px 4px rgba(15,23,42,.35))}
+.lsb-marker-pin{position:relative;display:block;width:30px;height:38px;background:currentColor;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.lsb-marker-pin::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;transform:translate(-50%,-50%)}
+.lsb-marker-preview{position:absolute;left:50%;bottom:calc(100% + 13px);width:220px;overflow:hidden;border:1px solid #e2e8f0;border-radius:14px;background:#fff;color:#0f172a;box-shadow:0 16px 38px rgba(15,23,42,.25);opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-50%) translateY(7px);transition:.18s;transform-origin:bottom center}
+.lsb-marker:hover{z-index:50}.lsb-marker:hover .lsb-marker-preview,.lsb-marker:focus-visible .lsb-marker-preview{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.lsb-marker-preview img{display:block;width:100%;height:120px;object-fit:cover;background:#e2e8f0}
+.lsb-marker-preview-body{padding:10px 12px;text-align:left}.lsb-marker-preview-body strong{display:block;font-size:14px;line-height:1.35}.lsb-marker-preview-body small{display:block;margin-top:4px;color:#64748b;font-size:11px}
+.lsb-slider-panel{position:relative;display:flex;align-items:center;min-height:380px;padding:0 42px 28px}
+.lsb-viewport{width:100%;overflow:hidden}
+.lsb-track{display:flex;gap:14px;transition:transform .45s ease;will-change:transform}
+.lsb-card{flex:0 0 calc((100% - 14px)/2);overflow:hidden;border:1px solid #e2e8f0;border-radius:17px;background:#fff;box-shadow:0 8px 22px rgba(15,23,42,.08)}
+.lsb-card-image{position:relative;height:155px;overflow:hidden;background:#e2e8f0}.lsb-card-image img{width:100%;height:100%;object-fit:cover}.lsb-card-badge{position:absolute;left:9px;top:9px;max-width:calc(100% - 18px);padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.94);color:#334155;font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lsb-card-body{padding:13px}.lsb-card-body h3{margin:0 0 8px;color:#111827;font-size:17px;line-height:1.35}.lsb-meta{display:flex;align-items:flex-start;gap:6px;margin:5px 0;color:#64748b;font-size:12px}.lsb-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}.lsb-card-stats{color:#64748b;font-size:11px}.lsb-detail-btn{border:0;border-radius:9px;padding:8px 10px;background:#2563eb;color:#fff;font-weight:700;font-size:11px;cursor:pointer}
+.lsb-arrow{position:absolute;z-index:8;top:50%;width:34px;height:34px;border:1px solid #dbe3ee;border-radius:50%;background:#fff;color:#2563eb;font-size:25px;line-height:1;box-shadow:0 7px 18px rgba(15,23,42,.14);transform:translateY(-50%);cursor:pointer}.lsb-prev{left:4px}.lsb-next{right:4px}.lsb-arrow:disabled{opacity:.35;cursor:not-allowed}
+.lsb-dots{position:absolute;left:50%;bottom:5px;display:flex;gap:6px;transform:translateX(-50%)}.lsb-dot{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:#cbd5e1;cursor:pointer}.lsb-dot.active{width:22px;border-radius:99px;background:#2563eb}
+.lsb-loading{display:flex;align-items:center;justify-content:center;width:100%;min-height:180px;color:#64748b;font-weight:700}.lsb-empty{padding:30px;text-align:center;color:#64748b}
+@media(max-width:980px){.lsb-box{grid-template-columns:1fr}.lsb-map-stage{min-height:330px}.lsb-slider-panel{min-height:350px}.lsb-card{flex-basis:calc((100% - 14px)/2)}}
+@media(max-width:620px){.lsb-section{padding:40px 0}.lsb-box{padding:10px;border-radius:20px}.lsb-map-stage{min-height:260px;aspect-ratio:4/3}.lsb-slider-panel{min-height:340px;padding:0 34px 26px}.lsb-card{flex-basis:100%}.lsb-card-image{height:170px}.lsb-marker-preview{width:180px}.lsb-marker-preview img{height:95px}}
+
+/* ===== Fix marker alignment and preview layer ===== */
+.lsb-box{
+  overflow:visible;
+}
+
+.lsb-rating-note{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin:4px 0 8px;
+  color:#171717;
+  font-size:clamp(16px,2vw,18px);
+  text-align:center;
+}
+
+.lsb-rating-note span{
+  color:#f5a000;
+  font-size:1.15em;
+}
+
+.lsb-show-all-wrap{
+  display:flex;
+  justify-content:center;
+  width:100%;
+  margin-top:26px;
+}
+
+.lsb-show-all-wrap[hidden]{display:none !important;}
+
+.lsb-show-all-btn{
+  min-height:46px;
+  padding:10px 25px;
+  border:0;
+  border-radius:15px;
+  background:#203d16;
+  box-shadow:0 8px 20px rgba(32,61,22,.2);
+  color:#fff;
+  font-family:inherit;
+  font-size:16px;
+  cursor:pointer;
+  transition:transform .2s ease,background .2s ease;
+}
+
+.lsb-show-all-btn:hover{
+  background:#2d571e;
+  transform:translateY(-2px);
+}
+
+.lsb-map-panel{
+  position:relative;
+  z-index:20;
+  overflow:visible;
+}
+
+.lsb-slider-panel{
+  position:relative;
+  z-index:10;
+}
+
+.lsb-map-stage{
+  overflow:visible;
+  isolation:isolate;
+}
+
+.lsb-map-image{
+  border-radius:19px;
+}
+
+.lsb-markers{
+  z-index:30;
+  overflow:visible;
+}
+
+.lsb-marker{
+  width:34px;
+  height:44px;
+  overflow:visible;
+  transform:translate(-50%,-100%);
+  filter:none;
+}
+
+.lsb-marker-pin{
+  position:absolute;
+  left:50%;
+  top:0;
+  width:30px;
+  height:30px;
+  margin-left:-15px;
+  display:block;
+  background:currentColor;
+  border:3px solid #fff;
+  border-radius:50% 50% 50% 0;
+  transform:rotate(-45deg);
+  transform-origin:50% 50%;
+  box-shadow:0 4px 8px rgba(15,23,42,.34);
+}
+
+.lsb-marker-pin::after{
+  width:8px;
+  height:8px;
+}
+
+.lsb-marker:hover,
+.lsb-marker:focus-visible{
+  z-index:99990;
+}
+
+.lsb-marker:hover .lsb-marker-pin,
+.lsb-marker:focus-visible .lsb-marker-pin{
+  transform:rotate(-45deg) scale(1.08);
+}
+
+.lsb-marker-preview{
+  z-index:99999;
+  bottom:calc(100% + 8px);
+  overflow:hidden;
+  pointer-events:none;
+}
+
+.lsb-marker:hover .lsb-marker-preview,
+.lsb-marker:focus-visible .lsb-marker-preview{
+  z-index:99999;
+}
+#learningBaseModule .learning-card{
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:22px;
+    box-shadow:0 8px 22px rgba(15,23,42,.08);
+}
+
+#learningBaseModule .learning-card-image{
+    display:block;
+    width:100%;
+    height:210px;
+    object-fit:cover;
+    cursor:pointer;
+}
+
+#learningBaseModule .learning-card-body{
+    flex:1;
+    padding:28px 16px 20px;
+}
+
+#learningBaseModule .learning-card-title{
+    margin:0 0 20px;
+    color:#111827;
+    font-size:18px;
+    font-weight:800;
+    line-height:1.45;
+}
+
+#learningBaseModule .learning-point,
+#learningBaseModule .learning-meta{
+    color:#111827;
+    font-size:15px;
+    line-height:1.55;
+}
+
+#learningBaseModule .learning-card-cart-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+
+    width:100%;
+    min-height:64px;
+    margin:0;
+    padding:15px 18px;
+
+    border:0;
+    border-radius:0 0 22px 22px;
+
+    background:#f4511e;
+    color:#fff;
+
+    font-family:'Prompt','Kanit',Arial,sans-serif;
+    font-size:17px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+#learningBaseModule .learning-card-cart-btn:hover{
+    background:#df3f10;
+}
+
+#learningBaseModule .learning-card-cart-btn i{
+    font-size:20px;
+}
+/* กล่อง Popup */
+#detailModal .learning-modal-box{
+    display:flex;
+    flex-direction:column;
+    max-height:90vh;
+    overflow:hidden;
+    padding:0;
+}
+
+/* เนื้อหา */
+#detailModal #detailContent{
+    flex:1;
+    overflow-y:auto;
+    padding:24px;
+}
+
+#detailModal .detail-footer{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    padding:20px 24px 40px;
+}
+#detailModal #detailAddCartBtn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+
+    width:220px;
+    max-width:100%;
+
+    margin:0 auto 20px;   /* เพิ่มช่องว่างด้านล่าง 20px */
+}
+/* ========================================
+   Learning Source Area Grid
+======================================== */
+
+.lsb-section{
+  padding:64px 0;
+  background:#fff;
+}
+
+.lsb-open-all{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:10px 18px;
+
+  border-radius:12px;
+
+  background:#2563eb;
+  color:#fff;
+
+  text-decoration:none;
+
+  font-size:13px;
+  font-weight:700;
+}
+
+
+/* กล่องหลัก */
+
+.lsb-box{
+  display:block;
+  width:100%;
+  margin-top:20px;
+  box-sizing:border-box;
+}
+
+
+/* 3 คอลัมน์ */
+
+.lsb-area-grid{
+  display:grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0,1fr));
+
+  gap:30px 16px;
+
+  width:100%;
+}
+
+
+/* การ์ด */
+
+.lsb-area-card{
+  min-width:0;
+
+  cursor:pointer;
+
+  background:transparent;
+
+  border:0;
+
+  transition:
+    transform .2s ease;
+}
+
+
+.lsb-area-card:hover{
+  transform:translateY(-4px);
+}
+
+
+/* ภาพแผนที่ */
+
+.lsb-area-image{
+  width:100%;
+
+  aspect-ratio:16 / 10;
+
+  overflow:hidden;
+
+  border-radius:13px;
+
+  background:#e5e7eb;
+}
+
+
+.lsb-area-image img{
+  display:block;
+
+  width:100%;
+  height:100%;
+
+  object-fit:cover;
+
+  transition:
+    transform .3s ease;
+}
+
+
+.lsb-area-card:hover
+.lsb-area-image img{
+
+  transform:scale(1.025);
+
+}
+
+
+/* กรณีไม่มีภาพ */
+
+.lsb-no-map{
+  display:flex;
+
+  align-items:center;
+  justify-content:center;
+
+  width:100%;
+  height:100%;
+
+  color:#94a3b8;
+
+  font-size:14px;
+}
+
+
+/* ข้อมูล */
+
+.lsb-area-info{
+  padding:8px 2px 0;
+}
+
+
+.lsb-area-info h3{
+  margin:0 0 2px;
+  color:#111;
+  font-size:16px;
+  line-height:1.25;
+}
+
+.lsb-area-title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.lsb-area-title-row h3{
+  min-width:0;
+  margin:0;
+}
+
+.lsb-area-rating{
+  display:inline-flex;
+  flex:0 0 auto;
+  align-items:center;
+  gap:4px;
+  color:#202020;
+  font-size:15px;
+  line-height:1;
+}
+
+.lsb-area-rating span{
+  color:#f5a000;
+  font-size:24px;
+  line-height:1;
+}
+
+.lsb-area-stat{
+  color:#333;
+  font-size:14px;
+  line-height:1.5;
+}
+
+.lsb-area-stat strong{
+  margin-left:8px;
+  color:#111;
+}
+
+
+/* Loading */
+
+.lsb-loading{
+  grid-column:1 / -1;
+
+  display:flex;
+
+  align-items:center;
+  justify-content:center;
+
+  min-height:200px;
+
+  color:#64748b;
+
+  font-weight:700;
+}
+
+
+/* Tablet */
+
+@media(max-width:900px){
+
+  .lsb-area-grid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+}
+
+
+/* Mobile */
+
+@media(max-width:600px){
+
+  .lsb-section{
+    padding:40px 0;
+  }
+
+  .lsb-area-grid{
+    grid-template-columns:1fr;
+
+    gap:24px;
+  }
+
+  .lsb-area-info h3{
+    font-size:20px;
+  }
+
+  .lsb-rating-note{
+    margin-top:12px;
+    font-size:15px;
+  }
+
+}
+
+/* shopactivity.html activity cards - 2026-08-28 */
+body.shopactivity-page #activityGrid .learning-card-image-wrap{
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  background:#e5e7eb;
+}
+
+body.shopactivity-page #activityGrid .learning-card-image{
+  height:250px;
+}
+
+body.shopactivity-page #activityGrid .learning-point-badge{
+  position:absolute;
+  top:14px;
+  right:14px;
+  z-index:2;
+  padding:6px 10px;
+  border-radius:4px;
+  background:rgba(255,255,255,.96);
+  color:#111827;
+  box-shadow:0 2px 8px rgba(15,23,42,.16);
+  font-size:17px;
+  font-weight:700;
+  line-height:1.2;
+}
+
+body.shopactivity-page #activityGrid .learning-card-body{
+  padding:24px 18px 22px;
+}
+
+body.shopactivity-page #activityGrid .learning-card-title{
+  margin:0 0 16px;
+  font-size:20px;
+  line-height:1.45;
+}
+
+body.shopactivity-page #activityGrid .learning-card-meta-line{
+  margin-top:9px;
+  color:#4b5563;
+  font-size:16px;
+  line-height:1.55;
+}
+
+@media (max-width:768px){
+  body.shopactivity-page #activityGrid .learning-card-image{
+    height:220px;
+  }
+  body.shopactivity-page #activityGrid .learning-point-badge{
+    top:12px;
+    right:12px;
+    font-size:15px;
+  }
+}
+

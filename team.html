@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>ทำเนียบบุคลากร</title>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin-subpage.css?v=20260826-1">
+  <link rel="stylesheet" href="team-manager.css?v=20260826-1">
+
+  <style>
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      background:#f8fafc;
+      color:#1f2937;
+      font-family:
+        "Noto Sans Thai",
+        "Sarabun",
+        Arial,
+        sans-serif;
+    }
+
+    .team-page{
+      min-height:100vh;
+      padding:56px 0 90px;
+      background:
+        radial-gradient(
+          circle at top left,
+          rgba(255, 193, 7, .08),
+          transparent 30%
+        ),
+        #f8fafc;
+    }
+
+    .team-page-container{
+      width:min(1320px, calc(100% - 40px));
+      margin:0 auto;
+    }
+
+    .team-page-topbar{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      margin-bottom:10px;
+    }
+
+    .team-back-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 18px;
+
+      border:1px solid #e2e8f0;
+      border-radius:999px;
+
+      background:#fff;
+      color:#334155;
+      text-decoration:none;
+      font-size:15px;
+      font-weight:700;
+
+      box-shadow:0 5px 16px rgba(15,23,42,.07);
+      transition:.2s ease;
+    }
+
+    .team-back-btn:hover{
+      color:#ef7c00;
+      border-color:#f59e0b;
+      transform:translateY(-2px);
+    }
+
+    .team-page-heading{
+      margin-bottom:46px;
+      text-align:center;
+    }
+
+    .team-page-kicker{
+      margin-bottom:5px;
+      color:#f5a000;
+      font-size:15px;
+      font-weight:800;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+
+    .team-page-heading h1{
+      margin:0;
+      color:#20242b;
+      font-size:clamp(34px, 5vw, 48px);
+      font-weight:800;
+      line-height:1.15;
+    }
+
+    .team-heading-line{
+      width:80px;
+      height:5px;
+      margin:17px auto;
+      border-radius:999px;
+      background:linear-gradient(
+        90deg,
+        #ffbf00,
+        #ff6a00
+      );
+    }
+
+    .team-page-heading p{
+      margin:0;
+      color:#6b7280;
+      font-size:17px;
+    }
+
+    .team-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:26px;
+    }
+
+    .team-card{
+      min-width:0;
+      overflow:hidden;
+      padding:24px 20px 22px;
+
+      border:1px solid #edf0f5;
+      border-radius:20px;
+      background:#fff;
+
+      text-align:center;
+
+      box-shadow:0 10px 30px rgba(15,23,42,.08);
+      transition:
+        transform .25s ease,
+        box-shadow .25s ease;
+    }
+
+    .team-card::before{
+      content:"";
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:5px;
+      background:linear-gradient(
+        90deg,
+        #5b168b,
+        #ffbf00
+      );
+    }
+
+    .team-card:hover{
+      transform:translateY(-7px);
+      box-shadow:0 18px 40px rgba(15,23,42,.14);
+    }
+
+    .team-card-image{
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      width:100%;
+      aspect-ratio:1 / 1.08;
+      overflow:hidden;
+
+      border-radius:14px;
+      background:
+        linear-gradient(
+          145deg,
+          #fafafa,
+          #f0f1f3
+        );
+
+      box-shadow:0 8px 22px rgba(15,23,42,.10);
+    }
+
+    .team-card-image img{
+      display:block;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:center top;
+    }
+
+    .team-card-name{
+      margin:24px 0 7px;
+      color:#334155;
+      font-size:20px;
+      font-weight:800;
+      line-height:1.35;
+    }
+
+    .team-card-position{
+      min-height:46px;
+      margin:0;
+      color:#6b7280;
+      font-size:15px;
+      font-weight:600;
+      line-height:1.5;
+    }
+
+
+
+    .team-status{
+      grid-column:1 / -1;
+      padding:48px 20px;
+
+      border:1px dashed #cbd5e1;
+      border-radius:18px;
+
+      background:#fff;
+      color:#64748b;
+
+      text-align:center;
+      font-size:16px;
+    }
+
+    @media (max-width:1100px){
+      .team-grid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width:820px){
+      .team-page{
+        padding:36px 0 65px;
+      }
+
+      .team-page-container{
+        width:min(100% - 28px, 1320px);
+      }
+
+      .team-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:18px;
+      }
+    }
+
+    @media (max-width:540px){
+      .team-page-topbar{
+        justify-content:stretch;
+      }
+
+      .team-back-btn{
+        width:100%;
+      }
+
+      .team-page-heading{
+        margin-top:30px;
+        margin-bottom:32px;
+      }
+
+      .team-grid{
+        grid-template-columns:1fr;
+      }
+
+      .team-card{
+        padding:20px 18px;
+      }
+
+      .team-card-image{
+        max-height:420px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="team-page">
+    <div class="team-page-container">
+
+      <div class="team-page-topbar admin-subpage-topbar">
+        <button class="admin-manage-data-button" type="button" data-admin-page="team" hidden>
+          <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+          จัดการข้อมูล
+        </button>
+        <a class="team-back-btn"
+           href="index.html" onclick="return backToHome(event)">
+          <i class="fa-solid fa-arrow-left"></i>
+          กลับหน้าหลัก
+        </a>
+      </div>
+
+      <header class="team-page-heading">
+        <div class="team-page-kicker">
+          OUR TEAM
+        </div>
+
+        <h1>ทำเนียบบุคลากร</h1>
+
+        <div class="team-heading-line"></div>
+
+        <p>
+          คณะผู้บริหาร ครู และบุคลากรทางการศึกษา
+        </p>
+      </header>
+
+      <div id="teamGrid"
+           class="team-grid">
+
+        <div id="teamStatus"
+             class="team-status">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          กำลังโหลดข้อมูลบุคลากร...
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="admin-subpage.js?v=20260826-1"></script>
+  <script src="team-manager.js?v=20260826-1"></script>
+  <script>
+    (() => {
+      'use strict';
+
+      const TEAM_API_URL =
+        'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=team';
+
+      const PLACEHOLDER_IMAGE =
+        'https://placehold.co/600x700?text=Personnel';
+
+      const escapeHtml = value =>
+        String(value ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+
+      function normalizeTeamMember(row) {
+        return {
+          order: String(row.order ?? '').trim(),
+          name: String(row.name ?? '').trim(),
+          position: String(row.position ?? '').trim(),
+          image: String(
+            row.image ??
+            row.imageUrl ??
+            ''
+          ).trim()
+        };
+      }
+
+      function renderTeam(items) {
+        const grid =
+          document.getElementById('teamGrid');
+
+        if (!grid) return;
+
+        if (!items.length) {
+          grid.innerHTML = `
+            <div class="team-status">
+              ยังไม่มีข้อมูลบุคลากร
+            </div>
+          `;
+
+          return;
+        }
+
+        grid.innerHTML = items.map(item => {
+          const name = escapeHtml(
+            item.name || 'ไม่ระบุชื่อ'
+          );
+
+          const position = escapeHtml(
+            item.position || 'ไม่ระบุตำแหน่ง'
+          );
+
+          const image = escapeHtml(
+            item.image || PLACEHOLDER_IMAGE
+          );
+
+          return `
+            <article class="team-card">
+
+              <div class="team-card-image">
+                <img
+                  src="${image}"
+                  alt="${name}"
+                  loading="lazy"
+                  onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+              </div>
+
+              <h2 class="team-card-name">
+                ${name}
+              </h2>
+
+              <p class="team-card-position">
+                ${position}
+              </p>
+            </article>
+          `;
+        }).join('');
+      }
+
+      async function loadTeam() {
+        const grid =
+          document.getElementById('teamGrid');
+
+        try {
+          const response = await fetch(
+            TEAM_API_URL + '&_t=' + Date.now(),
+            {
+              method:'GET',
+              cache:'no-store'
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `HTTP ${response.status}`
+            );
+          }
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(
+              result.message ||
+              'โหลดข้อมูลบุคลากรไม่สำเร็จ'
+            );
+          }
+
+          const items = (result.team || [])
+            .map(normalizeTeamMember)
+            .filter(item =>
+              item.name ||
+              item.position ||
+              item.image
+            );
+
+          renderTeam(items);
+
+        } catch (error) {
+          console.error('Team page:', error);
+
+          if (grid) {
+            grid.innerHTML = `
+              <div class="team-status">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                ไม่สามารถโหลดข้อมูลบุคลากรได้
+                กรุณาตรวจสอบ Apps Script
+              </div>
+            `;
+          }
+        }
+      }
+
+      document.addEventListener(
+        'DOMContentLoaded',
+        loadTeam
+      );
+      document.addEventListener(
+        'team-admin-updated',
+        loadTeam
+      );
+    })();
+  </script>
+<script>
+function backToHome(event) {
+  event.preventDefault();
+
+  // เปิด user_all.html เป็นแท็บใหม่
+  if (window.opener && !window.opener.closed) {
+    window.close();
+    return false;
+  }
+
+  // เปิดในแท็บเดียวกัน
+  if (window.history.length > 1) {
+    window.history.back();
+    return false;
+  }
+
+  // เปิด user_all.html โดยตรง
+  window.location.href = 'index.html';
+  return false;
+}
+</script>
+</body>
+</html>
