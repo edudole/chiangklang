@@ -167,6 +167,17 @@ function renderMainNavMenus(data) {
   const districtBox = document.getElementById('districtMenuList');
   const libraryBox = document.getElementById('libraryMenuList');
 
+  function setToggleTitle(box, title) {
+    if (!box) return;
+    const button = box.closest('.main-nav-dropdown')?.querySelector('.main-nav-dropdown-toggle');
+    const label = String(title || '').trim();
+    if (!button || !label) return;
+    button.innerHTML = `${escapeHtml(label)} <span aria-hidden="true">▾</span>`;
+  }
+
+  setToggleTitle(districtBox, data.districtTitle || data.subdistrictTitle || 'สกร.ระดับตำบล');
+  setToggleTitle(libraryBox, data.libraryTitle || 'ห้องสมุด');
+
   function normalize(items) {
     return (Array.isArray(items) ? items : [])
       .map(item => Array.isArray(item)
