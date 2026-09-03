@@ -97,6 +97,15 @@ function syncLinkedMenus(){
   layout.forEach(item=>{
     document.querySelectorAll(`a[href="#${CSS.escape(item.id)}"]`).forEach(link=>{link.hidden=item.visible===false;link.dataset.sectionVisibilityLinked='1'});
   });
+  // learningBaseModule controls nav-profile-actions: ปิด SECTION แล้วซ่อนชุดข้อมูลสมาชิกด้วย
+  const learningBaseItem = layout.find(item => item.id === 'learningBaseModule');
+  const profileVisible = !learningBaseItem || learningBaseItem.visible !== false;
+  document.querySelectorAll('.nav-profile-actions').forEach(actions => {
+    actions.hidden = !profileVisible;
+    actions.setAttribute('aria-hidden', profileVisible ? 'false' : 'true');
+    if (profileVisible) actions.style.removeProperty('display');
+    else actions.style.setProperty('display', 'none', 'important');
+  });
 }
 function marker(item,index){
   const section=document.getElementById(item.id);if(!section)return;

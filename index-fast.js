@@ -435,6 +435,17 @@ function renderMainNavMenus(data) {
   const districtBox = document.getElementById('districtMenuList');
   const libraryBox = document.getElementById('libraryMenuList');
 
+  function setToggleTitle(box, title) {
+    if (!box) return;
+    const button = box.closest('.main-nav-dropdown')?.querySelector('.main-nav-dropdown-toggle');
+    const label = String(title || '').trim();
+    if (!button || !label) return;
+    button.innerHTML = `${escapeHtml(label)} <span aria-hidden="true">▾</span>`;
+  }
+
+  setToggleTitle(districtBox, data.districtTitle || data.subdistrictTitle || 'สกร.ระดับตำบล');
+  setToggleTitle(libraryBox, data.libraryTitle || 'ห้องสมุด');
+
   function normalize(items) {
     return (Array.isArray(items) ? items : [])
       .map(item => Array.isArray(item)
@@ -1276,6 +1287,15 @@ function renderCustomSections(){
 function syncLinkedMenus(){
   layout.forEach(item=>{
     document.querySelectorAll(`a[href="#${CSS.escape(item.id)}"]`).forEach(link=>{link.hidden=item.visible===false;link.dataset.sectionVisibilityLinked='1'});
+  });
+  // learningBaseModule controls nav-profile-actions: ปิด SECTION แล้วซ่อนชุดข้อมูลสมาชิกด้วย
+  const learningBaseItem = layout.find(item => item.id === 'learningBaseModule');
+  const profileVisible = !learningBaseItem || learningBaseItem.visible !== false;
+  document.querySelectorAll('.nav-profile-actions').forEach(actions => {
+    actions.hidden = !profileVisible;
+    actions.setAttribute('aria-hidden', profileVisible ? 'false' : 'true');
+    if (profileVisible) actions.style.removeProperty('display');
+    else actions.style.setProperty('display', 'none', 'important');
   });
 }
 function marker(item,index){
