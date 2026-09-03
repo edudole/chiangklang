@@ -13,13 +13,37 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <script>
-    // เริ่มโหลดข้อมูลหลักตั้งแต่ <head> ไม่ต้องรอ JavaScript ด้านล่างหน้า
-    window.__SITE_HOMEFAST_PREFETCH = fetch(
-      'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=homefast',
-      { method: 'GET', cache: 'default', credentials: 'omit' }
-    ).then(function (response) {
-      return response.ok ? response.json() : null;
-    }).catch(function () { return null; });
+    // Cold load: เริ่ม homefast ตั้งแต่ <head>.
+    // Repeat load: ถ้ามี cache ที่ยังใช้ได้ ไม่ยิง Apps Script ซ้ำให้แย่ง bandwidth กับ CSS/รูปภาพ.
+    (function () {
+      var cacheKey = 'SITE_FAST:homefast-v3';
+      var maxAge = 15 * 60 * 1000;
+      var admin = false;
+      try { admin = Boolean(sessionStorage.getItem('mysiteAdminToken')); } catch (_) {}
+
+      function hasUsable(storage) {
+        if (!storage) return false;
+        try {
+          var saved = JSON.parse(storage.getItem(cacheKey) || 'null');
+          return Boolean(saved && saved.savedAt && (Date.now() - saved.savedAt <= maxAge));
+        } catch (_) { return false; }
+      }
+
+      if (!admin && (hasUsable(window.sessionStorage) || hasUsable(window.localStorage))) return;
+
+      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = controller ? setTimeout(function () { controller.abort(); }, 14000) : null;
+      window.__SITE_HOMEFAST_PREFETCH = fetch(
+        'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=homefast',
+        { method: 'GET', cache: 'default', credentials: 'omit', signal: controller ? controller.signal : undefined }
+      ).then(function (response) {
+        return response.ok ? response.json() : null;
+      }).catch(function () {
+        return null;
+      }).finally(function () {
+        if (timer) clearTimeout(timer);
+      });
+    })();
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -40,21 +64,7 @@
       contain-intrinsic-size: 1px 620px;
     }
 </style>
-<link rel="stylesheet" href="style.css?v=20260828-register-1" />
-  <link rel="stylesheet" href="announcement.css?v=20260824-1" />
-  <link rel="stylesheet" href="site-content.css?v=20260824-1" />
-  <link rel="stylesheet" href="admin-mode.css?v=20260831-storage-1" />
-  <link rel="stylesheet" href="admin-section-guide.css?v=20260902-image-detail-2" />
-  <link rel="stylesheet" href="learning-source-box.css?v=20260819-2" />
-  <link rel="stylesheet" href="activity-box.css?v=20260826-6" />
-  <link rel="stylesheet" href="fbpost-box.css?v=20260826-1" />
-  <link rel="stylesheet" href="boss-box.css?v=20260723-2" />
-  <link rel="stylesheet" href="bus-box.css?v=20260723-1" />
-  <link rel="stylesheet" href="cliproom-box.css?v=20260827-1" />
-  <link rel="stylesheet" href="shopactivity-box.css?v=20260828-1" />
-  <link rel="stylesheet" href="user-box.css?v=20260818-1" />
-  <link rel="stylesheet" href="student-services.css?v=20260822-2" />
-  <link rel="stylesheet" href="home-summary.css?v=20260824-3" />
+  <link rel="stylesheet" href="index-fast-core.css?v=20260903-fast-1">
   <style>
     #learningBaseModule.shopactivity-preview{padding:52px 0;background:linear-gradient(145deg,#f4f7fb,#fff 55%,#eff5ff)}
     #learningBaseModule .shopactivity-arrow{width:40px;height:40px;padding:0;border-radius:50%;background:#fff;color:#2563eb;font-size:28px}
@@ -62,8 +72,7 @@
     #learningBaseModule .shopactivity-dot.active{width:27px;background:#2563eb}
     @media(max-width:620px){#learningBaseModule.shopactivity-preview{padding:38px 0}#learningBaseModule .shopactivity-arrow{top:auto;bottom:0;width:36px;height:36px;padding:0}}
   </style>
-  <link rel="stylesheet" href="profile-box.css?v=20260828-register-login-effect-1" />
-<link rel="stylesheet" href="student-box.css?v=20260817-1" />
+  <link rel="stylesheet" href="index-fast-profile.css?v=20260903-fast-1">
   <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link
   rel="stylesheet"
@@ -632,23 +641,7 @@
     <div class="copyright">© 2026 Mintana. All rights reserved.</div>
   </footer>
 
-<script defer src="site-fast-data.js?v=20260830-fast-2"></script>
-<script defer src="script.js?v=20260830-fast-1"></script>
-<script defer src="announcement.js?v=20260824-1"></script>
-<script defer src="site-content.js?v=20260824-1"></script>
-<script defer src="admin-mode.js?v=20260902-newsurl-optional-2"></script>
-<script defer src="admin-section-guide.js?v=20260902-image-detail-2"></script>
-<script defer src="home-summary.js?v=20260830-fast-2"></script>
-<script defer src="profile-config.js?v=20260821-1"></script>
-<script defer src="student-profile-login.js?v=20260830-login-fast-2"></script>
-<script defer src="student-service-ranking.js?v=20260830-fast-2"></script>
-<script defer src="user-box.js?v=20260818-2"></script>
-<script defer src="learning-source-box.js?v=20260819-2"></script>
-  <script defer src="activity-box.js?v=20260826-6"></script>
-  <script defer src="fbpost-box.js?v=20260826-7"></script>
-  <script defer src="boss-box.js?v=20260723-2"></script>
-  <script defer src="cliproom-box.js?v=20260815-3"></script>
-  <script defer src="shopactivity-box.js?v=20260815-1"></script>
+<script defer src="index-fast.js?v=20260903-fast-1"></script>
 
 <!-- Student Modal -->
 <div id="studentModal" class="learning-modal">
@@ -928,9 +921,6 @@
 
 <!-- Popup รายละเอียดหนังสือ -->
 </div>
-
-  <script defer src="learning-base.js?v=20260828-register-login-effect-1"></script>
-  <script defer src="profile-box.js?v=20260731-1"></script>
 
   
 
