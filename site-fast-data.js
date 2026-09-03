@@ -67,8 +67,13 @@
   async function fetchJson(url, options = {}) {
     const key = String(options.key || '').trim();
     const ttl = Number(options.ttl || 0);
+    const staleTtl = Number(options.staleTtl || (ttl > 0 ? Math.max(ttl * 5, 15 * 60 * 1000) : 0));
     const cached = ttl > 0 ? readCache(key, ttl) : null;
     if (cached) return cached.data;
+
+    // เก็บ cache เก่าไว้เป็น fallback เฉพาะ request แบบอ่านข้อมูล
+    // ช่วยลดข้อความ "โหลดไม่สำเร็จ" เมื่อ Apps Script/เครือข่ายสะดุดชั่วคราว
+    const stale = staleTtl > ttl && key ? readCache(key, staleTtl) : null;
 
     const inflightKey = key || String(url);
     if (inflight.has(inflightKey)) return inflight.get(inflightKey);
@@ -77,6 +82,13 @@
       .then(result => {
         if (ttl > 0) writeCache(key, result);
         return result;
+      })
+      .catch(error => {
+        if (stale) {
+          console.warn('SiteFast ใช้ cache สำรอง:', key, error);
+          return stale.data;
+        }
+        throw error;
       })
       .finally(() => inflight.delete(inflightKey));
 
@@ -108,8 +120,8 @@
     // แสดงข้อมูลจาก cache ทันที แล้ว refresh เงียบ ๆ ภายหลัง
     const fresh = readCache(HOMEFAST_CACHE_KEY, HOMEFAST_TTL);
     if (fresh) {
+      // Cache ยังสด: ใช้ทันทีและไม่ยิง Apps Script ซ้ำโดยไม่จำเป็น
       homeFastPromise = Promise.resolve(fresh.data);
-      refreshHomeFastInBackground();
       return homeFastPromise;
     }
 
@@ -124,10 +136,13 @@
     // รับ promise ที่เริ่ม fetch ตั้งแต่ <head> ถ้ามี เพื่อไม่ยิงซ้ำ
     const prefetched = window.__SITE_HOMEFAST_PREFETCH;
     const request = prefetched
-      ? Promise.resolve(prefetched).then(result => {
-          if (!result || result.success === false) throw new Error(result?.message || 'homefast ไม่สำเร็จ');
-          return result;
-        })
+      ? withTimeout(Promise.resolve(prefetched), NETWORK_TIMEOUT, 'homefast prefetch ใช้เวลานานเกินไป')
+          .then(result => {
+            if (!result || result.success === false) throw new Error(result?.message || 'homefast ไม่สำเร็จ');
+            return result;
+          })
+          // homefast เป็น read-only จึงลองใหม่ได้อย่างปลอดภัยเมื่อ prefetch สะดุด
+          .catch(() => networkJson(API_URL + '?mode=homefast'))
       : networkJson(API_URL + '?mode=homefast');
 
     homeFastPromise = request

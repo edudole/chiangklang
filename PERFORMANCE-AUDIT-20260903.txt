@@ -1,0 +1,50 @@
+PERFORMANCE AUDIT — 2026-09-03
+================================
+
+หลักการ: ปรับความเร็วโดยไม่เปลี่ยนผลลัพธ์/ฟังก์ชัน/สิทธิ์/เส้นทาง API ของระบบ
+
+แก้ไข GitHub หน้า index.html
+1) รวม local CSS 17 requests -> 2 bundles (คงลำดับ cascade รอบ inline style เดิม)
+   - index-fast-core.css
+   - index-fast-profile.css
+2) รวม local JavaScript 19 requests -> 1 bundle โดย concat IIFE ตามลำดับเดิม
+   - index-fast.js
+   - ไฟล์ JS/CSS ต้นฉบับยังอยู่ครบเพื่อให้ subpages และ Admin dynamic loader ใช้ต่อ
+3) homefast prefetch ตรวจ browser cache ก่อน
+   - ถ้ามี cache อายุไม่เกิน 15 นาที จะไม่ยิง Apps Script ซ้ำตอนเปิดหน้า
+4) SiteFast ไม่ background-refresh เมื่อ cache ยังสด
+5) request ที่มี cache จะใช้ stale cache เป็น fallback เมื่อ network/Apps Script สะดุดชั่วคราว
+6) homefast prefetch มี timeout และ fallback request เพื่อไม่ค้างรอ Promise เดิม
+
+แก้ไข Apps Script
+1) ลบ getBossData_ รุ่นเก่าที่ถูก declaration รุ่นหลังทับอยู่แล้ว
+2) getBossData_: อ่าน boss!B2:H3 ครั้งเดียวแทนหลาย getRange
+3) getSetting(): อ่าน setting!B2:B3 ครั้งเดียว
+4) getWebsiteImages(): อ่าน B2:B6 ครั้งเดียว และ reuse Spreadsheet เดียวกับเมนู setting/nav
+5) getUserCardData(): อ่านเฉพาะ A:U ที่ระบบใช้ แทน getLastColumn ทั้งชีต
+6) ไม่ส่ง sampleStudentId ใน public usercards เพราะหน้าเว็บไม่มี user-sample แล้ว
+
+สิ่งที่ตั้งใจไม่เปลี่ยน
+- API URL เดิม
+- Admin login/session/CRUD เดิม
+- Student login/profile/cart/score เดิม
+- mode/action เดิม
+- โครงสร้าง SECTION และข้อมูลที่แสดงเดิม (ยกเว้น user-sample ที่ถูกสั่งลบก่อนหน้า)
+- ไฟล์ย่อยเดิมยังอยู่ครบ
+
+การติดตั้ง
+- GitHub: ใช้ ZIP รุ่น FAST นี้แทนชุดเดิม
+- Apps Script: ใช้ Code-AppsScript-FAST-20260903.txt แทนโค้ดหลัก แล้ว Deploy Web App เวอร์ชันใหม่
+
+ผลตรวจหลังแก้
+- local static requests ของ index: 36 -> 3 (ลด 33 requests หรือประมาณ 91.7%)
+- CSS gzip proxy: ~35.4 KB -> ~28.0 KB
+- JS gzip proxy: ~46.8 KB -> ~34.2 KB
+- DOM element IDs ก่อน/หลัง: 136 / 136 และตรงกันทั้งหมด
+- href ของลิงก์ใช้งานก่อน/หลัง: 31 / 31 และตรงกันทั้งหมด
+- node --check: site-fast-data.js, index-fast.js, user-all.js และ Apps Script รุ่น FAST ผ่าน syntax check
+- getBossData_ ใน Apps Script รุ่น FAST เหลือ 1 declaration
+
+หมายเหตุชื่อ helper ซ้ำใน index-fast.js
+- ชื่อเช่น render/load/readCache อาจปรากฏหลายครั้ง แต่แต่ละไฟล์เดิมถูกห่อด้วย IIFE (() => {...})()
+- bundle concat IIFE ทั้งก้อนตามลำดับเดิม จึงยังแยก scope และไม่ชนกัน
