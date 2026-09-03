@@ -36,7 +36,6 @@
     grid.innerHTML = users.map(user => {
       const photo = safeUrl(user.photo);
       const loginUrl = safeUrl(user.loginUrl);
-      const studentId = String(user.sampleStudentId || '#N/A');
       return `<article class="user-card">
         <div class="user-card-inner">
           <div class="user-card-photo" style="background-image:url('${escapeHtml(photo)}')">
@@ -57,10 +56,6 @@
               ${progressRow('ม.ต้น', user.middleComplete, 'progress-middle')}
               ${progressRow('ม.ปลาย', user.highComplete, 'progress-high')}
             </div>
-            <p class="user-sample">ตัวอย่างเลขประจำตัวนักศึกษา<br>
-              <span>${escapeHtml(studentId)}</span>
-              <button class="user-copy" type="button" data-copy="${escapeHtml(studentId)}" title="คัดลอก">▣</button>
-            </p>
             ${loginUrl ? `<a class="user-login" href="${escapeHtml(loginUrl)}" target="_blank" rel="noopener noreferrer">Login</a>` : ''}
           </div>
         </div>
@@ -102,19 +97,6 @@
     document.getElementById('userSearch')?.addEventListener('input', filterUsers);
     document.getElementById('userRefresh')?.addEventListener('click', loadUsers);
     document.getElementById('userPrint')?.addEventListener('click', () => window.print());
-    document.getElementById('usersGrid')?.addEventListener('click', async event => {
-      const button = event.target.closest('[data-copy]');
-      if (!button) return;
-      const value = button.dataset.copy;
-      if (!value || value === '#N/A') return;
-      try {
-        await navigator.clipboard.writeText(value);
-        button.textContent = '✓';
-        setTimeout(() => { button.textContent = '▣'; }, 1200);
-      } catch (error) {
-        console.warn('คัดลอกไม่สำเร็จ:', error);
-      }
-    });
     loadUsers();
   });
 })();

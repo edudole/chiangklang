@@ -45,8 +45,6 @@ body { margin: 0; background: #f8fafc; color: #20242b; font-family: "Anuphan", A
 .progress-middle::-webkit-progress-value { border-radius: 99px; background: #1abc9c; }
 .progress-high::-webkit-progress-value { border-radius: 99px; background: #f39c12; }
 .progress-primary::-moz-progress-bar { background: #e74c3c; } .progress-middle::-moz-progress-bar { background: #1abc9c; } .progress-high::-moz-progress-bar { background: #f39c12; }
-.user-sample { margin: 7px 0 0; color: #444; font-size: 9px; line-height: 1.45; }
-.user-copy { border: 0; background: transparent; cursor: pointer; }
 .user-login { display: flex; align-items: center; justify-content: center; min-height: 34px; margin-top: auto; border-radius: 4px; background: #0d6efd; color: #fff; font-size: 11px; font-weight: 800; text-decoration: none; }
 .users-empty, .users-error { grid-column: 1 / -1; padding: 60px 20px; border-radius: 16px; background: #fff; color: #64748b; text-align: center; }
 .users-error { color: #b91c1c; }
