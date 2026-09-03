@@ -200,6 +200,9 @@
 .button-manager-table th,
 .button-manager-table td{padding:9px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 .button-manager-table th{position:sticky;top:0;z-index:2;background:#f8fafc;font-size:13px;font-weight:800;white-space:nowrap}
+.button-manager-table tbody tr{transition:background .15s ease,box-shadow .15s ease}
+.button-manager-table tbody tr.is-previewing{background:#eff6ff;box-shadow:inset 4px 0 0 #2563eb}
+.button-manager-table tbody tr.is-previewing td{background:transparent}
 .button-manager-table input[type="text"],
 .button-manager-table input[type="url"]{
   width:100%;min-width:140px;border:1px solid #cbd5e1;border-radius:8px;padding:8px 9px;

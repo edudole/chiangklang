@@ -13,6 +13,7 @@ const STYLE_OPTIONS=[
   ['compact','ปุ่มแคปซูล ไอคอน + ชื่อ']
 ];
 let state={style:'icon-text',items:[]};
+let previewKey='';
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const validUrl=v=>/^https?:\/\//i.test(String(v||'').trim());
@@ -99,7 +100,8 @@ function styleSelectHtml(){return STYLE_OPTIONS.map(([v,l])=>`<option value="${v
 function rowHtml(item,index){
   const iconHidden=needsIcon(state.style)?'':' is-hidden';
   const preview=item.iconUrl?`<img class="button-manager-icon-preview" src="${esc(item.iconUrl)}" alt="">`:'';
-  return `<tr data-key="${esc(item.key)}">
+  const previewClass=item.key===previewKey?' class="is-previewing"':'';
+  return `<tr data-key="${esc(item.key)}"${previewClass}>
     <td><div class="button-manager-order"><button type="button" class="button-manager-small-btn" data-up="${esc(item.key)}" title="เลื่อนขึ้น">▲</button><button type="button" class="button-manager-small-btn" data-down="${esc(item.key)}" title="เลื่อนลง">▼</button></div></td>
     <td><input class="button-name" type="text" value="${esc(item.name)}" placeholder="ชื่อปุ่ม" maxlength="80"></td>
     <td class="button-manager-icon-cell button-manager-icon-column${iconHidden}"><div class="button-manager-icon-row">${preview}<input class="button-icon-url" type="url" value="${esc(item.iconUrl)}" placeholder="https://..."><label class="button-manager-upload-label"><i class="fa-solid fa-cloud-arrow-up"></i>อัปโหลด<input class="button-manager-file" type="file" accept="image/*"></label></div><small class="button-manager-icon-status">URL รูปไอคอน หรืออัปโหลดรูป (ต้นฉบับไม่เกิน 100 MB)</small></td>
@@ -117,7 +119,7 @@ function managerHtml(){
       <div id="buttonManagerPreview" class="button-manager-preview" aria-live="polite"></div>
       <button id="buttonManagerAdd" type="button" class="button-manager-add"><i class="fa-solid fa-plus"></i> เพิ่มปุ่ม</button>
     </div>
-    <div class="button-manager-note">รูปแบบที่เลือกจะใช้กับปุ่มทุกปุ่มใน SECTION เดียวกัน ตัวอย่างตรงกลางจะใช้ข้อมูลจากรายการแรกและเปลี่ยนทันทีเมื่อแก้ชื่อ สี หรือไอคอน หากยังไม่มีรายการจะแสดงโมเดลของรูปแบบปุ่มที่เลือก</div>
+    <div class="button-manager-note">รูปแบบที่เลือกจะใช้กับปุ่มทุกปุ่มใน SECTION เดียวกัน ตัวอย่างตรงกลางจะแสดงปุ่มที่กำลังแก้ไข และเปลี่ยนทันทีเมื่อแก้ชื่อ สี หรือไอคอน หากยังไม่มีรายการจะแสดงโมเดลของรูปแบบปุ่มที่เลือก</div>
     <div class="button-manager-table-wrap"><table class="button-manager-table"><thead><tr><th>ลำดับ</th><th>ชื่อปุ่ม</th><th class="button-manager-icon-column ${needsIcon(state.style)?'':'is-hidden'}">รูปภาพ/ไอคอน</th><th>URL</th><th>สีปุ่ม</th><th>สีข้อความ</th><th>แสดง</th><th>ลบ</th></tr></thead><tbody id="buttonManagerBody">${state.items.length?state.items.map(rowHtml).join(''):'<tr><td colspan="8" style="text-align:center;padding:28px">ยังไม่มีรายการปุ่ม กด + เพิ่มปุ่ม</td></tr>'}</tbody></table></div>
   </div>`;
 }
@@ -126,12 +128,33 @@ function previewIconMarkup(src,isModel){
   if(src)return `<img class="button-section-icon" src="${esc(src)}" alt="">`;
   return `<span class="button-manager-preview-icon-model${isModel?' is-model':''}" aria-hidden="true"><i class="fa-regular fa-image"></i></span>`;
 }
+function getPreviewRow(popup){
+  if(!popup)return null;
+  let row=null;
+  if(previewKey){
+    row=[...popup.querySelectorAll('#buttonManagerBody tr[data-key]')].find(tr=>tr.dataset.key===previewKey)||null;
+  }
+  if(!row)row=popup.querySelector('#buttonManagerBody tr[data-key]');
+  if(row)previewKey=row.dataset.key||'';
+  return row;
+}
+function markPreviewRow(popup){
+  if(!popup)return;
+  popup.querySelectorAll('#buttonManagerBody tr[data-key]').forEach(tr=>tr.classList.toggle('is-previewing',!!previewKey&&tr.dataset.key===previewKey));
+}
+function activatePreview(key){
+  previewKey=String(key||'');
+  const popup=Swal.getPopup();
+  markPreviewRow(popup);
+  updateManagerPreview();
+}
 function updateManagerPreview(){
   const popup=Swal.getPopup();if(!popup)return;
   const holder=popup.querySelector('#buttonManagerPreview');if(!holder)return;
   const selectedStyle=normalizeStyle(popup.querySelector('#buttonManagerStyle')?.value||state.style);
   state.style=selectedStyle;
-  const row=popup.querySelector('#buttonManagerBody tr[data-key]');
+  const row=getPreviewRow(popup);
+  markPreviewRow(popup);
   let name='ชื่อปุ่ม',bg='#e2e8f0',text='#64748b',icon='',isModel=true;
   if(row){
     const key=row.dataset.key;
@@ -145,7 +168,7 @@ function updateManagerPreview(){
   }
   const iconMarkup=needsIcon(selectedStyle)?previewIconMarkup(icon,isModel):'';
   const modelClass=isModel?' is-model':'';
-  holder.innerHTML=`<div class="button-manager-preview-caption">${isModel?'โมเดลรูปแบบปุ่ม':'ตัวอย่างจากรายการแรก'}</div><div class="button-manager-preview-stage"><span class="button-section-item button-manager-preview-button is-${esc(selectedStyle)}${modelClass}" style="--button-bg:${esc(bg)};--button-color:${esc(text)}">${iconMarkup}<span class="button-section-label">${esc(name)}</span></span></div>`;
+  holder.innerHTML=`<div class="button-manager-preview-caption">${isModel?'โมเดลรูปแบบปุ่ม':'ตัวอย่างปุ่มที่กำลังแก้ไข'}</div><div class="button-manager-preview-stage"><span class="button-section-item button-manager-preview-button is-${esc(selectedStyle)}${modelClass}" style="--button-bg:${esc(bg)};--button-color:${esc(text)}">${iconMarkup}<span class="button-section-label">${esc(name)}</span></span></div>`;
 }
 function releaseItemPreview(item){
   if(item?.previewObjectUrl){try{URL.revokeObjectURL(item.previewObjectUrl)}catch(ignore){};item.previewObjectUrl='';}
@@ -174,17 +197,19 @@ function bindManager(){
   const popup=Swal.getPopup();if(!popup)return;
   const style=popup.querySelector('#buttonManagerStyle');
   if(style)style.onchange=()=>{syncStateFromDom();state.style=normalizeStyle(style.value);Swal.update({html:managerHtml()});bindManager()};
-  popup.querySelector('#buttonManagerAdd')?.addEventListener('click',()=>{syncStateFromDom();state.items.push(normalizeItem({buttonColor:'#2563eb',textColor:'#ffffff',visible:true},state.items.length));Swal.update({html:managerHtml()});bindManager()});
-  popup.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const removed=state.items.find(x=>x.key===btn.dataset.delete);releaseItemPreview(removed);state.items=state.items.filter(x=>x.key!==btn.dataset.delete);Swal.update({html:managerHtml()});bindManager()});
+  popup.querySelector('#buttonManagerAdd')?.addEventListener('click',()=>{syncStateFromDom();const added=normalizeItem({buttonColor:'#2563eb',textColor:'#ffffff',visible:true},state.items.length);state.items.push(added);previewKey=added.key;Swal.update({html:managerHtml()});bindManager()});
+  popup.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const removedKey=btn.dataset.delete;const removed=state.items.find(x=>x.key===removedKey);releaseItemPreview(removed);const removedIndex=state.items.findIndex(x=>x.key===removedKey);state.items=state.items.filter(x=>x.key!==removedKey);if(previewKey===removedKey){const next=state.items[Math.min(Math.max(removedIndex,0),Math.max(state.items.length-1,0))];previewKey=next?.key||'';}Swal.update({html:managerHtml()});bindManager()});
   popup.querySelectorAll('[data-up]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const i=state.items.findIndex(x=>x.key===btn.dataset.up);if(i>0)[state.items[i-1],state.items[i]]=[state.items[i],state.items[i-1]];Swal.update({html:managerHtml()});bindManager()});
   popup.querySelectorAll('[data-down]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const i=state.items.findIndex(x=>x.key===btn.dataset.down);if(i>=0&&i<state.items.length-1)[state.items[i],state.items[i+1]]=[state.items[i+1],state.items[i]];Swal.update({html:managerHtml()});bindManager()});
-  popup.querySelectorAll('tr[data-key]').forEach((tr,rowIndex)=>{
+  popup.querySelectorAll('tr[data-key]').forEach((tr)=>{
     const key=tr.dataset.key;
     const item=state.items.find(x=>x.key===key);
-    const refreshIfFirst=()=>{if(rowIndex===0)updateManagerPreview()};
-    tr.querySelector('.button-name')?.addEventListener('input',refreshIfFirst);
-    tr.querySelector('.button-bg')?.addEventListener('input',refreshIfFirst);
-    tr.querySelector('.button-text')?.addEventListener('input',refreshIfFirst);
+    const refreshCurrent=()=>activatePreview(key);
+    tr.addEventListener('focusin',refreshCurrent);
+    tr.addEventListener('pointerdown',refreshCurrent);
+    tr.querySelector('.button-name')?.addEventListener('input',refreshCurrent);
+    tr.querySelector('.button-bg')?.addEventListener('input',refreshCurrent);
+    tr.querySelector('.button-text')?.addEventListener('input',refreshCurrent);
     const file=tr.querySelector('.button-manager-file');
     if(file)file.onchange=()=>{
       const selected=file.files&&file.files[0];if(!selected)return;
@@ -197,7 +222,7 @@ function bindManager(){
         item.previewObjectUrl=URL.createObjectURL(selected);
         item.previewIconUrl=item.previewObjectUrl;
         if(status)status.textContent=`เลือกแล้ว: ${selected.name} (${Math.ceil(selected.size/1024)} KB) ตัวอย่างเปลี่ยนแล้ว และจะย่อ/อัปโหลดเมื่อกดบันทึก`;
-        refreshIfFirst();
+        refreshCurrent();
       }
     };
     const iconUrl=tr.querySelector('.button-icon-url');
@@ -207,7 +232,7 @@ function bindManager(){
         if(value){releaseItemPreview(item);item.pendingFile=null;item.previewIconUrl=value;}
         else if(!item.pendingFile)item.previewIconUrl='';
       }
-      refreshIfFirst();
+      refreshCurrent();
     };
   });
   updateManagerPreview();
@@ -215,7 +240,6 @@ function bindManager(){
 async function collectAndSave(){
   syncStateFromDom();
   state.style=normalizeStyle(Swal.getPopup()?.querySelector('#buttonManagerStyle')?.value||state.style);
-  if(!state.items.length)return {style:state.style,items:[]};
   for(let i=0;i<state.items.length;i++){
     const item=state.items[i];
     item.name=String(item.name||'').trim();item.url=String(item.url||'').trim();item.iconUrl=String(item.iconUrl||'').trim();
@@ -241,7 +265,7 @@ async function openManager(){
   try{
     Swal.fire({title:'กำลังโหลดรายการปุ่ม...',didOpen:()=>Swal.showLoading(),allowOutsideClick:false,showConfirmButton:false});
     const data=await adminApi('list');
-    state.style=normalizeStyle(data.style);state.items=(data.items||[]).map(normalizeItem);
+    state.style=normalizeStyle(data.style);state.items=(data.items||[]).map(normalizeItem);previewKey=state.items[0]?.key||'';
     const result=await Swal.fire({
       title:'จัดการปุ่ม',html:managerHtml(),width:'96vw',showCancelButton:true,confirmButtonText:'บันทึกทั้งหมด',cancelButtonText:'ยกเลิก',confirmButtonColor:'#16a34a',customClass:{popup:'button-manager-popup'},
       didOpen:bindManager,
