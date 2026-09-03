@@ -108,16 +108,86 @@
 .button-manager-popup{font-family:"Kanit",sans-serif!important}
 .button-manager-shell{text-align:left;color:#0f172a}
 .button-manager-toolbar{
-  display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) minmax(260px,1.25fr) minmax(130px,1fr);
+  align-items:end;
+  gap:18px;
   margin-bottom:14px;
 }
 .button-manager-style-wrap{display:grid;gap:6px;min-width:280px}
+
+.button-manager-preview{
+  min-width:260px;
+  width:100%;
+  justify-self:center;
+  text-align:center;
+}
+.button-manager-preview-caption{
+  margin-bottom:6px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:800;
+}
+.button-manager-preview-stage{
+  min-height:86px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 12px;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  background:linear-gradient(135deg,#f8fafc,#ffffff);
+}
+.button-manager-preview-button{
+  width:min(260px,100%);
+  max-width:260px;
+  min-height:54px;
+  pointer-events:none;
+  user-select:none;
+  font-size:15px;
+  box-shadow:0 7px 16px color-mix(in srgb,var(--button-bg) 24%,transparent);
+}
+.button-manager-preview-button.is-icon-only{
+  width:74px;
+  min-width:74px;
+  min-height:74px;
+  max-width:74px;
+}
+.button-manager-preview-button.is-icon-top{min-height:92px;max-width:150px}
+.button-manager-preview-button.is-compact{max-width:220px}
+.button-manager-preview-button.is-model{
+  border:2px dashed #cbd5e1;
+  background:#f8fafc;
+  color:#94a3b8;
+  box-shadow:none;
+}
+.button-manager-preview-icon-model{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  display:grid;
+  place-items:center;
+  border:2px dashed currentColor;
+  border-radius:9px;
+  opacity:.9;
+  font-size:16px;
+}
+.button-manager-preview-button.is-icon-only .button-manager-preview-icon-model{
+  width:42px;height:42px;flex-basis:42px;border-radius:50%;
+}
+.button-manager-preview-button.is-icon-top .button-manager-preview-icon-model{
+  width:40px;height:40px;flex-basis:40px;
+}
+.button-manager-preview-button.is-compact .button-manager-preview-icon-model{
+  width:24px;height:24px;flex-basis:24px;border-radius:7px;font-size:12px;
+}
 .button-manager-style-wrap label{font-weight:800;font-size:14px}
 .button-manager-style{
   width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;
   font:600 14px/1.2 "Kanit",sans-serif;background:#fff;color:#0f172a;
 }
 .button-manager-add{
+  justify-self:end;
   border:0;border-radius:10px;padding:11px 16px;background:#16a34a;color:#fff;
   font:800 14px/1 "Kanit",sans-serif;cursor:pointer;
 }
@@ -152,7 +222,17 @@
 .button-manager-icon-preview{width:36px;height:36px;object-fit:contain;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0}
 .button-manager-visible{text-align:center}
 .button-manager-icon-column.is-hidden{display:none}
+@media(max-width:980px){
+  .button-manager-toolbar{grid-template-columns:1fr 1fr}
+  .button-manager-preview{grid-column:1/-1;grid-row:2;max-width:420px}
+  .button-manager-add{grid-column:2;grid-row:1}
+}
 @media(max-width:720px){
+  .button-manager-toolbar{grid-template-columns:1fr}
+  .button-manager-style-wrap{min-width:0}
+  .button-manager-preview{grid-column:1;grid-row:2;min-width:0;max-width:none}
+  .button-manager-add{grid-column:1;grid-row:3;justify-self:stretch}
+  .button-manager-preview-stage{min-height:78px}
   .button-section{padding:34px 0 30px}
   .button-section-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .button-section-item{font-size:15px;padding:12px;min-height:60px;border-radius:13px}

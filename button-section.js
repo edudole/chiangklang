@@ -30,7 +30,9 @@ function normalizeItem(item,index){
     textColor:validColor(item?.textColor)?String(item.textColor):'#ffffff',
     order:Number(item?.order)||index+1,
     visible:item?.visible!==false,
-    pendingFile:item?.pendingFile||null
+    pendingFile:item?.pendingFile||null,
+    previewIconUrl:String(item?.previewIconUrl||item?.iconUrl||'').trim(),
+    previewObjectUrl:String(item?.previewObjectUrl||'').trim()
   };
 }
 async function publicLoad(){
@@ -110,11 +112,45 @@ function rowHtml(item,index){
 }
 function managerHtml(){
   return `<div class="button-manager-shell">
-    <div class="button-manager-toolbar"><div class="button-manager-style-wrap"><label>รูปแบบปุ่มทั้ง SECTION</label><select id="buttonManagerStyle" class="button-manager-style">${styleSelectHtml()}</select></div><button id="buttonManagerAdd" type="button" class="button-manager-add"><i class="fa-solid fa-plus"></i> เพิ่มปุ่ม</button></div>
-    <div class="button-manager-note">รูปแบบที่เลือกจะใช้กับปุ่มทุกปุ่มใน SECTION เดียวกัน หากเลือกรูปแบบที่ไม่มีไอคอน ระบบจะซ่อนช่องรูปภาพ/ไอคอนโดยอัตโนมัติ</div>
+    <div class="button-manager-toolbar">
+      <div class="button-manager-style-wrap"><label>รูปแบบปุ่มทั้ง SECTION</label><select id="buttonManagerStyle" class="button-manager-style">${styleSelectHtml()}</select></div>
+      <div id="buttonManagerPreview" class="button-manager-preview" aria-live="polite"></div>
+      <button id="buttonManagerAdd" type="button" class="button-manager-add"><i class="fa-solid fa-plus"></i> เพิ่มปุ่ม</button>
+    </div>
+    <div class="button-manager-note">รูปแบบที่เลือกจะใช้กับปุ่มทุกปุ่มใน SECTION เดียวกัน ตัวอย่างตรงกลางจะใช้ข้อมูลจากรายการแรกและเปลี่ยนทันทีเมื่อแก้ชื่อ สี หรือไอคอน หากยังไม่มีรายการจะแสดงโมเดลของรูปแบบปุ่มที่เลือก</div>
     <div class="button-manager-table-wrap"><table class="button-manager-table"><thead><tr><th>ลำดับ</th><th>ชื่อปุ่ม</th><th class="button-manager-icon-column ${needsIcon(state.style)?'':'is-hidden'}">รูปภาพ/ไอคอน</th><th>URL</th><th>สีปุ่ม</th><th>สีข้อความ</th><th>แสดง</th><th>ลบ</th></tr></thead><tbody id="buttonManagerBody">${state.items.length?state.items.map(rowHtml).join(''):'<tr><td colspan="8" style="text-align:center;padding:28px">ยังไม่มีรายการปุ่ม กด + เพิ่มปุ่ม</td></tr>'}</tbody></table></div>
   </div>`;
 }
+function previewIconMarkup(src,isModel){
+  if(!needsIcon(state.style))return '';
+  if(src)return `<img class="button-section-icon" src="${esc(src)}" alt="">`;
+  return `<span class="button-manager-preview-icon-model${isModel?' is-model':''}" aria-hidden="true"><i class="fa-regular fa-image"></i></span>`;
+}
+function updateManagerPreview(){
+  const popup=Swal.getPopup();if(!popup)return;
+  const holder=popup.querySelector('#buttonManagerPreview');if(!holder)return;
+  const selectedStyle=normalizeStyle(popup.querySelector('#buttonManagerStyle')?.value||state.style);
+  state.style=selectedStyle;
+  const row=popup.querySelector('#buttonManagerBody tr[data-key]');
+  let name='ชื่อปุ่ม',bg='#e2e8f0',text='#64748b',icon='',isModel=true;
+  if(row){
+    const key=row.dataset.key;
+    const item=state.items.find(x=>x.key===key)||{};
+    name=String(row.querySelector('.button-name')?.value||'').trim()||'ชื่อปุ่ม';
+    bg=row.querySelector('.button-bg')?.value||'#2563eb';
+    text=row.querySelector('.button-text')?.value||'#ffffff';
+    const typed=String(row.querySelector('.button-icon-url')?.value||'').trim();
+    icon=String(item.previewIconUrl||typed||item.iconUrl||'').trim();
+    isModel=false;
+  }
+  const iconMarkup=needsIcon(selectedStyle)?previewIconMarkup(icon,isModel):'';
+  const modelClass=isModel?' is-model':'';
+  holder.innerHTML=`<div class="button-manager-preview-caption">${isModel?'โมเดลรูปแบบปุ่ม':'ตัวอย่างจากรายการแรก'}</div><div class="button-manager-preview-stage"><span class="button-section-item button-manager-preview-button is-${esc(selectedStyle)}${modelClass}" style="--button-bg:${esc(bg)};--button-color:${esc(text)}">${iconMarkup}<span class="button-section-label">${esc(name)}</span></span></div>`;
+}
+function releaseItemPreview(item){
+  if(item?.previewObjectUrl){try{URL.revokeObjectURL(item.previewObjectUrl)}catch(ignore){};item.previewObjectUrl='';}
+}
+function cleanupPreviewObjectUrls(){state.items.forEach(releaseItemPreview)}
 function syncStateFromDom(){
   const popup=Swal.getPopup();if(!popup)return;
   const rows=[...popup.querySelectorAll('#buttonManagerBody tr[data-key]')];
@@ -139,16 +175,42 @@ function bindManager(){
   const style=popup.querySelector('#buttonManagerStyle');
   if(style)style.onchange=()=>{syncStateFromDom();state.style=normalizeStyle(style.value);Swal.update({html:managerHtml()});bindManager()};
   popup.querySelector('#buttonManagerAdd')?.addEventListener('click',()=>{syncStateFromDom();state.items.push(normalizeItem({buttonColor:'#2563eb',textColor:'#ffffff',visible:true},state.items.length));Swal.update({html:managerHtml()});bindManager()});
-  popup.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();state.items=state.items.filter(x=>x.key!==btn.dataset.delete);Swal.update({html:managerHtml()});bindManager()});
+  popup.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const removed=state.items.find(x=>x.key===btn.dataset.delete);releaseItemPreview(removed);state.items=state.items.filter(x=>x.key!==btn.dataset.delete);Swal.update({html:managerHtml()});bindManager()});
   popup.querySelectorAll('[data-up]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const i=state.items.findIndex(x=>x.key===btn.dataset.up);if(i>0)[state.items[i-1],state.items[i]]=[state.items[i],state.items[i-1]];Swal.update({html:managerHtml()});bindManager()});
   popup.querySelectorAll('[data-down]').forEach(btn=>btn.onclick=()=>{syncStateFromDom();const i=state.items.findIndex(x=>x.key===btn.dataset.down);if(i>=0&&i<state.items.length-1)[state.items[i],state.items[i+1]]=[state.items[i+1],state.items[i]];Swal.update({html:managerHtml()});bindManager()});
-  popup.querySelectorAll('tr[data-key]').forEach(tr=>{
+  popup.querySelectorAll('tr[data-key]').forEach((tr,rowIndex)=>{
     const key=tr.dataset.key;
+    const item=state.items.find(x=>x.key===key);
+    const refreshIfFirst=()=>{if(rowIndex===0)updateManagerPreview()};
+    tr.querySelector('.button-name')?.addEventListener('input',refreshIfFirst);
+    tr.querySelector('.button-bg')?.addEventListener('input',refreshIfFirst);
+    tr.querySelector('.button-text')?.addEventListener('input',refreshIfFirst);
     const file=tr.querySelector('.button-manager-file');
-    if(file)file.onchange=()=>{const selected=file.files&&file.files[0];if(!selected)return;const item=state.items.find(x=>x.key===key);if(item){item.pendingFile=selected;const status=tr.querySelector('.button-manager-icon-status');if(status)status.textContent=`เลือกแล้ว: ${selected.name} (${Math.ceil(selected.size/1024)} KB) จะย่อและอัปโหลดเมื่อกดบันทึก`;}};
+    if(file)file.onchange=()=>{
+      const selected=file.files&&file.files[0];if(!selected)return;
+      const status=tr.querySelector('.button-manager-icon-status');
+      if(!String(selected.type||'').startsWith('image/')){if(status)status.textContent='กรุณาเลือกไฟล์รูปภาพเท่านั้น';file.value='';return;}
+      if(selected.size>ICON_SOURCE_MAX){if(status)status.textContent='ไฟล์รูปภาพต้นฉบับต้องมีขนาดไม่เกิน 100 MB';file.value='';return;}
+      if(item){
+        releaseItemPreview(item);
+        item.pendingFile=selected;
+        item.previewObjectUrl=URL.createObjectURL(selected);
+        item.previewIconUrl=item.previewObjectUrl;
+        if(status)status.textContent=`เลือกแล้ว: ${selected.name} (${Math.ceil(selected.size/1024)} KB) ตัวอย่างเปลี่ยนแล้ว และจะย่อ/อัปโหลดเมื่อกดบันทึก`;
+        refreshIfFirst();
+      }
+    };
     const iconUrl=tr.querySelector('.button-icon-url');
-    if(iconUrl)iconUrl.oninput=()=>{const item=state.items.find(x=>x.key===key);if(item&&iconUrl.value.trim())item.pendingFile=null};
+    if(iconUrl)iconUrl.oninput=()=>{
+      if(item){
+        const value=iconUrl.value.trim();
+        if(value){releaseItemPreview(item);item.pendingFile=null;item.previewIconUrl=value;}
+        else if(!item.pendingFile)item.previewIconUrl='';
+      }
+      refreshIfFirst();
+    };
   });
+  updateManagerPreview();
 }
 async function collectAndSave(){
   syncStateFromDom();
@@ -165,14 +227,14 @@ async function collectAndSave(){
         Swal.getTitle().textContent=`กำลังย่อและอัปโหลดไอคอน ${i+1}/${state.items.length}`;
         const packed=await compressIcon(item.pendingFile);
         const uploaded=await adminApi('uploadicon',{imageData:packed.dataUrl,imageName:packed.fileName});
-        item.iconUrl=String(uploaded.url||'').trim();item.pendingFile=null;
+        releaseItemPreview(item);item.iconUrl=String(uploaded.url||'').trim();item.previewIconUrl=item.iconUrl;item.pendingFile=null;
       }
       if(!validUrl(item.iconUrl))throw new Error(`แถวที่ ${i+1}: กรุณาระบุ URL ไอคอนหรืออัปโหลดรูปไอคอน`);
     }
     item.order=i+1;
   }
   Swal.getTitle().textContent='กำลังบันทึกรายการปุ่ม...';
-  const result=await adminApi('save',{style:state.style,items:state.items.map(({pendingFile,key,...x})=>x)});
+  const result=await adminApi('save',{style:state.style,items:state.items.map(({pendingFile,previewIconUrl,previewObjectUrl,key,...x})=>x)});
   return result;
 }
 async function openManager(){
@@ -183,6 +245,7 @@ async function openManager(){
     const result=await Swal.fire({
       title:'จัดการปุ่ม',html:managerHtml(),width:'96vw',showCancelButton:true,confirmButtonText:'บันทึกทั้งหมด',cancelButtonText:'ยกเลิก',confirmButtonColor:'#16a34a',customClass:{popup:'button-manager-popup'},
       didOpen:bindManager,
+      willClose:cleanupPreviewObjectUrls,
       preConfirm:async()=>{try{Swal.showLoading();return await collectAndSave()}catch(err){Swal.hideLoading();Swal.showValidationMessage(err.message);return false}}
     });
     if(result.isConfirmed){render(result.value||await publicLoad());document.dispatchEvent(new CustomEvent('buttonsection-updated'));Swal.fire({icon:'success',title:'บันทึกปุ่มเรียบร้อยแล้ว',timer:1200,showConfirmButton:false})}
