@@ -2,7 +2,7 @@
   'use strict';
 
   const WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    'https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec';
   const API_URL = WEB_APP_URL + '?mode=usercards';
   let allUsers = [];
 
