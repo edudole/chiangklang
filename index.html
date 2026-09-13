@@ -16,8 +16,8 @@
     // Cold load: เริ่ม homefast ตั้งแต่ <head>.
     // Repeat load: ถ้ามี cache ที่ยังใช้ได้ ไม่ยิง Apps Script ซ้ำให้แย่ง bandwidth กับ CSS/รูปภาพ.
     (function () {
-      var cacheKey = 'SITE_FAST:homefast-v3';
-      var maxAge = 15 * 60 * 1000;
+      var cacheKey = 'SITE_FAST:homefast-v10-resilient-20260912';
+      var maxAge = 24 * 60 * 60 * 1000;
       var admin = false;
       try { admin = Boolean(sessionStorage.getItem('mysiteAdminToken')); } catch (_) {}
 
@@ -32,9 +32,9 @@
       if (!admin && (hasUsable(window.sessionStorage) || hasUsable(window.localStorage))) return;
 
       var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timer = controller ? setTimeout(function () { controller.abort(); }, 14000) : null;
+      var timer = controller ? setTimeout(function () { controller.abort(); }, 30000) : null;
       window.__SITE_HOMEFAST_PREFETCH = fetch(
-        'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=homefast',
+        'https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec?mode=homefast',
         { method: 'GET', cache: 'default', credentials: 'omit', signal: controller ? controller.signal : undefined }
       ).then(function (response) {
         return response.ok ? response.json() : null;
@@ -64,7 +64,7 @@
       contain-intrinsic-size: 1px 620px;
     }
 </style>
-  <link rel="stylesheet" href="index-fast-core.css?v=20260904-section-plus-1">
+  <link rel="stylesheet" href="index-fast-core.css?v=20260911-login-design-1">
   <link rel="stylesheet" href="button-section.css?v=20260904-buttonsection-preview-active-3">
   <style>
     #learningBaseModule.shopactivity-preview{padding:52px 0;background:linear-gradient(145deg,#f4f7fb,#fff 55%,#eff5ff)}
@@ -360,21 +360,39 @@
 
       <div class="student-services-grid">
         <div class="student-services-account">
-          <form id="studentServicesLoginForm" class="student-services-login">
-            <label for="studentServicesId">กรอกรหัสนักศึกษา</label>
-            <input
-              id="studentServicesId"
-              name="studentId"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              aria-label="รหัสนักศึกษา">
-            <button id="studentServicesLoginBtn" type="submit">Log in</button>
-          </form>
-          <img
-            class="student-services-account-image"
-            src="https://static.wixstatic.com/media/a503e5_de01d7417d364b9a81f6702f7dd6932a~mv2.png"
-            alt="นักศึกษา">
+          <div class="student-services-login-card" aria-label="เข้าสู่ระบบช่วยเหลือผู้เรียน">
+            <div class="student-services-login-visual">
+              <img
+                id="studentServicesBanner"
+                class="student-services-login-banner"
+                alt="ภาพระบบช่วยเหลือผู้เรียน"
+                hidden>
+            </div>
+
+            <div class="student-services-login-body">
+              <div id="studentServicesLogoWrap" class="student-services-login-logo-wrap" hidden>
+                <img
+                  id="studentServicesLogo"
+                  class="student-services-login-logo"
+                  alt="โลโก้ระบบช่วยเหลือผู้เรียน">
+              </div>
+
+              <h3 id="studentServicesSystemName" class="student-services-login-title">ระบบช่วยเหลือผู้เรียน</h3>
+              <p id="studentServicesOrganization" class="student-services-login-organization"></p>
+
+              <form id="studentServicesLoginForm" class="student-services-login">
+                <label for="studentServicesId">รหัสประจำตัวนักศึกษา</label>
+                <input
+                  id="studentServicesId"
+                  name="studentId"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  aria-label="รหัสประจำตัวนักศึกษา">
+                <button id="studentServicesLoginBtn" type="submit">LOGIN</button>
+              </form>
+            </div>
+          </div>
         </div>
 
         <article class="student-service-card student-service-exam"
@@ -657,7 +675,7 @@
   </footer>
 
 <script defer src="button-section.js?v=20260904-buttonsection-preview-active-3"></script>
-<script defer src="index-fast.js?v=20260904-buttonsection-1"></script>
+<script defer src="index-fast.js?v=20260912-performance-resilient-1"></script>
 
 <!-- Student Modal -->
 <div id="studentModal" class="learning-modal">

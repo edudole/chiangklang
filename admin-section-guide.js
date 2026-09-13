@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const API='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+const API='https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec';
 const builtins=[
   {id:'studentServicesBox',kind:'builtin',title:'บริการนักศึกษา',visible:true},
   {id:'userBox',kind:'builtin',title:'รายการ User',visible:true},
@@ -41,6 +41,18 @@ function normalize(items){
   return out;
 }
 async function getLayout(){
+  if(window.SiteFast?.getHomeFast){
+    try{
+      const home=await window.SiteFast.getHomeFast();
+      const homeData=home?.data||home||{};
+      if(Array.isArray(homeData.sectionLayout))return normalize(homeData.sectionLayout);
+    }catch(e){console.warn('sectionLayout homefast fallback:',e)}
+  }
+  if(window.SiteFast?.fetchMode){
+    const j=await window.SiteFast.fetchMode('sectionlayout',{}, {key:'section-layout-v3',ttl:5*60*1000,staleTtl:24*60*60*1000});
+    if(j?.success===false)throw new Error(j.message||'โหลดการจัดเรียง Section ไม่สำเร็จ');
+    return normalize(j?.items||[]);
+  }
   const r=await fetch(API+'?mode=sectionlayout&_t='+Date.now(),{cache:'no-store'}),j=await r.json();
   if(!r.ok||j.success===false)throw new Error(j.message||'โหลดการจัดเรียง Section ไม่สำเร็จ');
   return normalize(j.items);

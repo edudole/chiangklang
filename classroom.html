@@ -8,16 +8,96 @@
   <style>
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #fff; }
-    .app-frame { display: block; width: 100%; height: 100%; border: 0; }
+    .app-frame { display: none; width: 100%; height: 100%; border: 0; }
+    .status {
+      width: 100%; height: 100%; display: grid; place-items: center;
+      padding: 24px; font-family: Arial, sans-serif; text-align: center; color: #334155;
+    }
+    .status-card { max-width: 620px; }
+    .status-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .status-detail { font-size: 14px; line-height: 1.6; word-break: break-word; }
+    .retry-btn {
+      margin-top: 14px; border: 0; border-radius: 10px; padding: 10px 16px;
+      cursor: pointer; font-weight: 700;
+    }
   </style>
 </head>
 <body>
+  <div id="status" class="status" role="status" aria-live="polite">
+    <div class="status-card">
+      <div id="statusTitle" class="status-title">กำลังเปิดห้องเรียนออนไลน์...</div>
+      <div id="statusDetail" class="status-detail">กำลังอ่าน URL ล่าสุดจากฐานข้อมูล</div>
+      <button id="retryBtn" class="retry-btn" type="button" hidden>ลองใหม่</button>
+    </div>
+  </div>
+
   <iframe
+    id="appFrame"
     class="app-frame"
-    src="https://script.google.com/macros/s/AKfycbwFBc5jgQHGmBuC5eGTbc_chXK0k03CjobCBHiWvh3mdNVmu-wP0vr18Kx_Hj_HpEGN/exec"
     title="ระบบห้องเรียนออนไลน์"
     allow="clipboard-read; clipboard-write; camera; microphone"
     allowfullscreen>
   </iframe>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const API_URL = 'https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec';
+      const TARGET = 'classroom';
+      const frame = document.getElementById('appFrame');
+      const status = document.getElementById('status');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusDetail = document.getElementById('statusDetail');
+      const retryBtn = document.getElementById('retryBtn');
+
+      function isAppsScriptExecUrl(value) {
+        return /^https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec(?:[?#].*)?$/i.test(String(value || '').trim());
+      }
+
+      async function loadTarget() {
+        retryBtn.hidden = true;
+        statusTitle.textContent = 'กำลังเปิดห้องเรียนออนไลน์...';
+        statusDetail.textContent = 'กำลังอ่าน URL ล่าสุดจากฐานข้อมูล';
+
+        try {
+          if (!isAppsScriptExecUrl(API_URL)) {
+            throw new Error('ไม่พบ URL ของระบบเว็บไซต์หลัก');
+          }
+
+          const url = new URL(API_URL);
+          url.searchParams.set('mode', 'pageexec');
+          url.searchParams.set('target', TARGET);
+          url.searchParams.set('_t', Date.now());
+
+          const response = await fetch(url.toString(), { cache: 'no-store' });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+
+          const result = await response.json();
+          if (!result || result.success === false) {
+            throw new Error((result && result.message) || 'อ่าน URL ไม่สำเร็จ');
+          }
+
+          const execUrl = String(result.url || '').trim();
+          if (!isAppsScriptExecUrl(execUrl)) {
+            throw new Error('URL ที่ได้จากฐานข้อมูลไม่ใช่ Google Apps Script /exec');
+          }
+
+          frame.src = execUrl;
+          frame.style.display = 'block';
+          status.style.display = 'none';
+        } catch (err) {
+          frame.style.display = 'none';
+          status.style.display = 'grid';
+          statusTitle.textContent = 'เปิดห้องเรียนออนไลน์ไม่สำเร็จ';
+          statusDetail.textContent = err && err.message ? err.message : String(err);
+          retryBtn.hidden = false;
+        }
+      }
+
+      retryBtn.addEventListener('click', loadTarget);
+      loadTarget();
+    })();
+  </script>
 </body>
 </html>
