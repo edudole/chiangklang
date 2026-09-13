@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec';
+  const API='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
   const state={items:[],query:'',page:1,perPage:4};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   async function api(action,data={}){const token=sessionStorage.getItem('mysiteAdminToken')||'';const response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({mode:'facebookadmin',action,data,token})});const result=await response.json();if(!result.success)throw new Error(result.message||'ดำเนินการไม่สำเร็จ');return result.data}

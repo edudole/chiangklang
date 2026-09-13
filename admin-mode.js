@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API_URL='https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec';
+  const API_URL='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
   const CSS_FILES=['edit-website.css?v=20260827-2','news-manager.css?v=20260902-newsurl-optional-2','newsletter-manager.css?v=20260826-1','newsletter-overlay.css?v=20260826-3','facebook-manager.css?v=20260826-1'];
   const JS_FILES=['edit-website.js?v=20260827-2','news-manager.js?v=20260902-newsurl-optional-2','newsletter-manager.js?v=20260826-4','facebook-manager.js?v=20260826-2'];
   let toolsPromise=null;

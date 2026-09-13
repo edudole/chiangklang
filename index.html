@@ -34,7 +34,7 @@
       var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var timer = controller ? setTimeout(function () { controller.abort(); }, 30000) : null;
       window.__SITE_HOMEFAST_PREFETCH = fetch(
-        'https://script.google.com/macros/s/AKfycbwnwWu2oaPUU_UUvaYtP0yP4O6cEfZ23N5vUndfFTNbJgpGWaoJaX6yZ6on7MNk2j_1/exec?mode=homefast',
+        'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=homefast',
         { method: 'GET', cache: 'default', credentials: 'omit', signal: controller ? controller.signal : undefined }
       ).then(function (response) {
         return response.ok ? response.json() : null;
