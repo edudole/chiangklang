@@ -40,7 +40,7 @@
      * เพียงครั้งเดียว จึงไม่มี REQUEST_TIMEOUT/JSONP ที่ตัดการทำงานกลางทาง
      */
     try {
-      sessionStorage.setItem('SSS_PROFILE_ROLLNO', rollno);
+      sessionStorage.setItem('LP360:DISTRICT:SSS_PROFILE_ROLLNO', rollno);
     } catch (_) {}
 
     const profileUrl = `profile.html?rollno=${encodeURIComponent(rollno)}`;

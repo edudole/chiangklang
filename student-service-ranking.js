@@ -3,11 +3,11 @@
 
   // Web App เดิมของระบบหลัก (ไม่ต้องสร้าง Apps Script แยก)
   const STUDENT_SERVICE_API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
 
   const LEVELS = ['ประถม', 'ม.ต้น', 'ม.ปลาย'];
   const MEDALS = ['🥇1', '🥈2', '🥉3'];
-  const CACHE_KEY = 'studentServiceTop3:v1';
+  const CACHE_KEY = 'LP360:DISTRICT:studentServiceTop3:v1';
   const CACHE_AGE = 5 * 60 * 1000;
   const AUTO_ROTATE_DELAY = 4000;
   let rankingData = null;

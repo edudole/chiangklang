@@ -1,10 +1,10 @@
 (() => {
   'use strict';
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API_URL = window.APP_CONFIG.EXEC_URL;
   let items = [], mode = 'none';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   async function api(action, data = {}) {
-    const token = sessionStorage.getItem('mysiteAdminToken') || '';
+    const token = sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken') || '';
     const response = await fetch(API_URL,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({mode:'newsadmin',action,data,token})});
     if(!response.ok) throw new Error(`HTTP ${response.status}`); const result=await response.json(); if(!result.success) throw new Error(result.message||'ดำเนินการไม่สำเร็จ'); return result.data;
   }

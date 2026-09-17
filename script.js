@@ -2,7 +2,7 @@
   'use strict';
 
   const WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
   const IMAGE_API_URL = WEB_APP_URL + '?mode=images';
 
   const NEWS_API_URL = WEB_APP_URL + '?mode=news';
@@ -60,6 +60,73 @@
     if (event.key === 'Escape') closeMainNavDropdowns();
   });
 
+function getHeroOverlayProgressState(overlay) {
+  if (!overlay) return null;
+  if (overlay.__heroOverlayProgressState) {
+    return overlay.__heroOverlayProgressState;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'hero-image-progress-wrap';
+  wrap.setAttribute('aria-live', 'polite');
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <span class="hero-image-progress-label">Loading...</span>
+    <progress class="hero-image-progress-bar" max="100" value="0"></progress>
+  `;
+
+  overlay.appendChild(wrap);
+
+  overlay.__heroOverlayProgressState = {
+    wrap,
+    progress: wrap.querySelector('progress'),
+    timer: null,
+    value: 0,
+    hideTimer: null
+  };
+
+  return overlay.__heroOverlayProgressState;
+}
+
+function showHeroOverlayProgress(overlay) {
+  const state = getHeroOverlayProgressState(overlay);
+  if (!state) return;
+
+  if (state.timer) clearInterval(state.timer);
+  if (state.hideTimer) clearTimeout(state.hideTimer);
+
+  state.value = 14;
+  state.progress.value = state.value;
+  state.wrap.hidden = false;
+
+  state.timer = setInterval(() => {
+    state.value = Math.min(92, state.value + (state.value < 50 ? 7 : state.value < 75 ? 4 : 2));
+    state.progress.value = state.value;
+    if (state.value >= 92) {
+      clearInterval(state.timer);
+      state.timer = null;
+    }
+  }, 130);
+}
+
+function finishHeroOverlayProgress(overlay) {
+  const state = getHeroOverlayProgressState(overlay);
+  if (!state) return;
+
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+  if (state.hideTimer) clearTimeout(state.hideTimer);
+
+  state.value = 100;
+  state.progress.value = 100;
+
+  state.hideTimer = setTimeout(() => {
+    state.wrap.hidden = true;
+  }, 320);
+}
+
 async function loadWebsiteImages() {
   try {
     let result;
@@ -114,7 +181,7 @@ async function loadWebsiteImages() {
         .forEach(icon => {
           icon.textContent = '';
           icon.style.backgroundImage =
-            `url("${brandIconUrl}")`;
+            `url("${window.SiteFast?.imageUrl ? window.SiteFast.imageUrl(brandIconUrl, 320) : brandIconUrl}")`;
 
           icon.style.backgroundSize = 'cover';
           icon.style.backgroundPosition = 'center';
@@ -136,7 +203,14 @@ if (heroOverlayUrl) {
   const overlay = document.getElementById('websiteHeroOverlay');
 
   if (overlay) {
+    const heroFastUrl = window.SiteFast?.imageUrl
+      ? window.SiteFast.imageUrl(heroOverlayUrl, 1800)
+      : heroOverlayUrl;
     const heroImage = new Image();
+    heroImage.fetchPriority = 'high';
+    heroImage.decoding = 'async';
+
+    showHeroOverlayProgress(overlay);
 
     heroImage.onload = () => {
       overlay.style.backgroundImage =
@@ -146,20 +220,22 @@ if (heroOverlayUrl) {
           rgba(5,28,44,.79) 40%,
           rgba(5,28,44,.1) 78%
         ),
-        url("${heroOverlayUrl}")`;
+        url("${heroFastUrl}")`;
 
       overlay.style.backgroundSize = 'cover';
       overlay.style.backgroundPosition = 'center';
       overlay.style.backgroundRepeat = 'no-repeat';
 
       overlay.classList.add('website-hero-ready');
+      finishHeroOverlayProgress(overlay);
     };
 
     heroImage.onerror = () => {
       overlay.classList.add('website-hero-ready');
+      finishHeroOverlayProgress(overlay);
     };
 
-    heroImage.src = heroOverlayUrl;
+    heroImage.src = heroFastUrl;
   }
 }
 

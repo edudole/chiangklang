@@ -1,11 +1,11 @@
 (() => {
   'use strict';
-  const API='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API=window.APP_CONFIG.EXEC_URL;
   const state={items:[],query:'',page:1,perPage:5};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const validUrl=v=>{try{const u=new URL(v);return /^https?:$/.test(u.protocol)}catch(_){return false}};
   async function api(action,data={}){
-    const token=sessionStorage.getItem('mysiteAdminToken')||'';
+    const token=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken')||'';
     const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({mode:'activityadmin',action,data,token})});
     const out=await res.json(); if(!out.success) throw new Error(out.message||'ดำเนินการไม่สำเร็จ'); return out.data;
   }
