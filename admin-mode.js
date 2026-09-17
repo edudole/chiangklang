@@ -1,11 +1,11 @@
 (() => {
   'use strict';
-  const API_URL='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API_URL=window.APP_CONFIG.EXEC_URL;
   const CSS_FILES=['edit-website.css?v=20260827-2','news-manager.css?v=20260902-newsurl-optional-2','newsletter-manager.css?v=20260826-1','newsletter-overlay.css?v=20260826-3','facebook-manager.css?v=20260826-1'];
   const JS_FILES=['edit-website.js?v=20260827-2','news-manager.js?v=20260902-newsurl-optional-2','newsletter-manager.js?v=20260826-4','facebook-manager.js?v=20260826-2'];
   let toolsPromise=null;
   let storagePromise=null;
-  const STORAGE_CACHE_KEY='mysiteAdminStorageV1';
+  const STORAGE_CACHE_KEY='LP360:DISTRICT:mysiteAdminStorageV2D15';
   const STORAGE_CACHE_MS=5*60*1000;
   const $=id=>document.getElementById(id);
   async function api(payload){const response=await fetch(API_URL,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});if(!response.ok)throw new Error(`HTTP ${response.status}`);const result=await response.json();if(!result.success)throw new Error(result.message||'ดำเนินการไม่สำเร็จ');return result}
@@ -27,7 +27,7 @@
     const maxBytes=Math.max(1,Number(data&&data.limitBytes)||100*1024*1024*1024);
     const percent=Math.min(100,Math.max(0,(bytes/maxBytes)*100));
     used.textContent='ใช้พื้นที่แล้ว '+formatStorageGb(bytes);
-    limit.textContent=(data&&data.limitLabel)||'100 GB';
+    limit.textContent=(data&&data.limitLabel)||'—';
     fill.style.width=percent.toFixed(2)+'%';
     track.setAttribute('aria-valuenow',String(Math.round(percent)));
     track.setAttribute('aria-valuetext',used.textContent+' จาก '+limit.textContent);
@@ -38,7 +38,7 @@
   }
   function writeStorageCache(data){try{sessionStorage.setItem(STORAGE_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data}))}catch(_){}}
   function loadAdminStorage(force=false){
-    const token=sessionStorage.getItem('mysiteAdminToken');
+    const token=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken');
     if(!token)return Promise.resolve();
     const cached=!force&&readStorageCache();
     if(cached)renderAdminStorage(cached,'ready');else renderAdminStorage(null,'loading');
@@ -57,15 +57,15 @@
   function openLogin(){ $('adminLoginStatus').textContent='';$('adminLoginModal').hidden=false;setTimeout(()=>$('adminUsername').focus(),30) }
   function closeLogin(){ $('adminLoginModal').hidden=true }
   $('adminLoginButton').addEventListener('click',openLogin);$('adminLoginClose').addEventListener('click',closeLogin);$('adminLoginModal').addEventListener('click',e=>{if(e.target===$('adminLoginModal'))closeLogin()});
-  $('adminLoginForm').addEventListener('submit',async event=>{event.preventDefault();const status=$('adminLoginStatus'),submit=$('adminLoginSubmit');status.textContent='';submit.disabled=true;submit.textContent='กำลังตรวจสอบ...';try{const result=await api({mode:'adminlogin',username:$('adminUsername').value.trim(),password:$('adminPassword').value});sessionStorage.setItem('mysiteAdminToken',result.token);sessionStorage.setItem('mysiteAdminName',result.username||'Admin');submit.textContent='กำลังโหลดเครื่องมือ...';await activateAdmin()}catch(error){sessionStorage.removeItem('mysiteAdminToken');status.textContent=error.message}finally{submit.disabled=false;submit.textContent='เข้าสู่ระบบ'}});
+  $('adminLoginForm').addEventListener('submit',async event=>{event.preventDefault();const status=$('adminLoginStatus'),submit=$('adminLoginSubmit');status.textContent='';submit.disabled=true;submit.textContent='กำลังตรวจสอบ...';try{const result=await api({mode:'adminlogin',username:$('adminUsername').value.trim(),password:$('adminPassword').value});sessionStorage.setItem('LP360:DISTRICT:mysiteAdminToken',result.token);sessionStorage.setItem('LP360:DISTRICT:mysiteAdminName',result.username||'Admin');submit.textContent='กำลังโหลดเครื่องมือ...';await activateAdmin()}catch(error){sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminToken');status.textContent=error.message}finally{submit.disabled=false;submit.textContent='เข้าสู่ระบบ'}});
   $('adminForgotButton').addEventListener('click',async()=>{const modal=await Swal.fire({title:'ลืมรหัสผ่าน',input:'email',inputLabel:'กรอก Email ที่ลงทะเบียนไว้',showCancelButton:true,confirmButtonText:'ส่งข้อมูลเข้าสู่ Email',cancelButtonText:'ยกเลิก',confirmButtonColor:'#dc2626',inputValidator:value=>!value?'กรุณากรอก Email':undefined});if(!modal.isConfirmed)return;Swal.fire({title:'กำลังส่ง Email...',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});try{await api({mode:'adminforgot',email:modal.value.trim()});Swal.fire({icon:'success',title:'ส่ง Email แล้ว',text:'กรุณาตรวจสอบกล่องจดหมายและจดหมายขยะ'})}catch(error){Swal.fire({icon:'error',title:'ส่งไม่สำเร็จ',text:error.message})}});
   $('adminTogglePassword').addEventListener('click',event=>{const input=$('adminPassword');input.type=input.type==='password'?'text':'password';event.currentTarget.querySelector('i').className=input.type==='password'?'fa-solid fa-eye':'fa-solid fa-eye-slash'});
-  $('adminLogoutButton').addEventListener('click',()=>{sessionStorage.removeItem('mysiteAdminToken');sessionStorage.removeItem('mysiteAdminName');setAdminUi(false);if(window.Swal)Swal.close()});
-  const existingToken=sessionStorage.getItem('mysiteAdminToken');
+  $('adminLogoutButton').addEventListener('click',()=>{sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminToken');sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminName');setAdminUi(false);if(window.Swal)Swal.close()});
+  const existingToken=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken');
   if(existingToken){
     api({mode:'editwebsite',editor:'text',token:existingToken})
       .then(()=>loadAdminTools())
       .then(()=>{setAdminUi(true);loadAdminStorage(false)})
-      .catch(()=>{sessionStorage.removeItem('mysiteAdminToken');sessionStorage.removeItem('mysiteAdminName');setAdminUi(false)});
+      .catch(()=>{sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminToken');sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminName');setAdminUi(false)});
   }else setAdminUi(false);
 })();

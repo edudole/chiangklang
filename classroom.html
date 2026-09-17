@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <script src="app-config.js?v=20260917-1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
   <title>ห้องเรียนออนไลน์</title>
@@ -43,7 +44,7 @@
     (() => {
       'use strict';
 
-      const API_URL = 'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+      const API_URL = window.APP_CONFIG.EXEC_URL;
       const TARGET = 'classroom';
       const frame = document.getElementById('appFrame');
       const status = document.getElementById('status');

@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const API='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+const API=window.APP_CONFIG.EXEC_URL;
 const builtins=[
   {id:'studentServicesBox',kind:'builtin',title:'บริการนักศึกษา',visible:true},
   {id:'userBox',kind:'builtin',title:'รายการ User',visible:true},
@@ -58,7 +58,7 @@ async function getLayout(){
   return normalize(j.items);
 }
 async function apiAdmin(action,data){
-  const token=sessionStorage.getItem('mysiteAdminToken')||'';
+  const token=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken')||'';
   const r=await fetch(API,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({mode:'sectionlayoutadmin',action,token,data:data||{}})}),j=await r.json();
   if(!r.ok||!j.success)throw new Error(j.message||'ดำเนินการไม่สำเร็จ');
   return j.data||{};

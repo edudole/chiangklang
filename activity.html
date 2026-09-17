@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
 
+  <script src="app-config.js?v=20260917-1"></script>
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
@@ -274,7 +275,7 @@
       'use strict';
 
       const ACTIVITY_API_URL =
-        'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=activity';
+        window.APP_CONFIG.EXEC_URL + '?mode=activity';
 
       const ACTIVITY_PAGE_SIZE = 12;
       const activityState = { items: [], page: 0 };

@@ -3,23 +3,267 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
+  <script src="app-config.js?v=20260917-1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="เว็บไซต์ร้านหนังสือสไตล์ภาพประกอบ พร้อมใช้งานบน GitHub Pages" />
   <title>สกร.ระดับอำเภอบ่อเกลือ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://script.google.com" crossorigin>
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+  <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
+  <link rel="dns-prefetch" href="//lh3.googleusercontent.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <script>
-    // Cold load: เริ่ม homefast ตั้งแต่ <head>.
-    // Repeat load: ถ้ามี cache ที่ยังใช้ได้ ไม่ยิง Apps Script ซ้ำให้แย่ง bandwidth กับ CSS/รูปภาพ.
+    // FIRST-LOAD FAST 2026-09-17
+    // 1) homecritical เริ่มพร้อม <head> เพื่อให้ Hero เริ่มดาวน์โหลดก่อน homefast ชุดใหญ่
+    // 2) preload Hero ล่าสุดจาก cache ทันทีในครั้งถัดไป
+    // 3) homefast เดิมยังทำงานต่อครบทุก section
     (function () {
-      var cacheKey = 'SITE_FAST:homefast-v10-resilient-20260912';
+      var NS = "LP360:DISTRICT:";
+      var API = window.APP_CONFIG.EXEC_URL;
+      var cacheKey = NS + 'SITE_FAST:homefast-v13-first-image-20260917';
+      var heroKey = NS + 'CRITICAL_IMAGE:hero-v1';
       var maxAge = 24 * 60 * 60 * 1000;
       var admin = false;
-      try { admin = Boolean(sessionStorage.getItem('mysiteAdminToken')); } catch (_) {}
+      try { admin = Boolean(sessionStorage.getItem(NS + 'mysiteAdminToken')); } catch (_) {}
+
+      function optimizedImage(url, width) {
+        url = String(url || '').trim();
+        if (!url) return '';
+        var match = url.match(/lh3\.googleusercontent\.com\/d\/([-\w]{25,})/i);
+        if (!match && /drive\.google\.com/i.test(url)) match = url.match(/[-\w]{25,}/);
+        if (!match) return url;
+        return 'https://lh3.googleusercontent.com/d/' + match[1] + '=w' + (width || 1800);
+      }
+
+      function preloadImage(url) {
+        if (!url || document.querySelector('link[data-lp360-hero-preload="1"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = url;
+        link.setAttribute('fetchpriority', 'high');
+        link.setAttribute('data-lp360-hero-preload', '1');
+        document.head.appendChild(link);
+      }
+
+      function ensureHeroProgressMarkup() {
+        var overlay = document.getElementById('websiteHeroOverlay');
+        if (!overlay) return null;
+        var wrap = overlay.querySelector('.hero-image-progress-wrap');
+        if (!wrap) {
+          wrap = document.createElement('div');
+          wrap.className = 'hero-image-progress-wrap';
+          wrap.setAttribute('aria-live', 'polite');
+          wrap.hidden = true;
+          wrap.innerHTML = '<div class="hero-image-progress-row"><span class="hero-image-progress-label">Loading...</span><strong class="hero-image-progress-percent">0%</strong></div><progress class="hero-image-progress-bar" max="100" value="0">0%</progress>';
+          overlay.appendChild(wrap);
+        }
+        return {
+          wrap: wrap,
+          progress: wrap.querySelector('progress'),
+          percent: wrap.querySelector('.hero-image-progress-percent')
+        };
+      }
+
+      // Hero progress นับงานจริง 2 ส่วน: heroTitleText 50% + รูป Hero 50%
+      // ระหว่างรอแต่ละงาน แถบจะค่อย ๆ วิ่ง แต่ 100% จะเกิดเมื่อทั้งสองส่วนจบแล้วเท่านั้น
+      (function createHeroProgressCoordinator() {
+        if (window.LP360HeroProgress) return;
+
+        var state = {
+          titleReady: false,
+          imageReady: false,
+          imageUrl: '',
+          value: 0,
+          timer: null,
+          hideTimer: null
+        };
+
+        function ui() {
+          return ensureHeroProgressMarkup();
+        }
+
+        function setValue(value) {
+          var parts = ui();
+          if (!parts) return;
+          var next = Math.max(state.value, Math.min(100, Math.round(value)));
+          state.value = next;
+          parts.progress.value = next;
+          parts.progress.textContent = next + '%';
+          if (parts.percent) parts.percent.textContent = next + '%';
+          parts.wrap.hidden = false;
+        }
+
+        function target() {
+          var completed = (state.titleReady ? 1 : 0) + (state.imageReady ? 1 : 0);
+          if (completed >= 2) return 100;
+          if (completed === 1) return 95;
+          return 45;
+        }
+
+        function stopTimer() {
+          if (!state.timer) return;
+          clearTimeout(state.timer);
+          state.timer = null;
+        }
+
+        function tick() {
+          var goal = target();
+          if (goal >= 100) {
+            complete();
+            return;
+          }
+          if (state.value < goal) {
+            var step = state.value < 25 ? 4 : state.value < 50 ? 2 : state.value < 80 ? 2 : 1;
+            setValue(Math.min(goal, state.value + step));
+          }
+          state.timer = setTimeout(tick, state.value < 50 ? 150 : 260);
+        }
+
+        function start() {
+          var parts = ui();
+          if (!parts) return;
+          if (state.hideTimer) {
+            clearTimeout(state.hideTimer);
+            state.hideTimer = null;
+          }
+          parts.wrap.hidden = false;
+          if (state.value <= 0) setValue(4);
+          if (!state.timer) state.timer = setTimeout(tick, 100);
+        }
+
+        function complete() {
+          if (!(state.titleReady && state.imageReady)) return;
+          stopTimer();
+          setValue(100);
+          var parts = ui();
+          if (!parts) return;
+          if (state.hideTimer) clearTimeout(state.hideTimer);
+          state.hideTimer = setTimeout(function () {
+            if (parts.wrap) parts.wrap.hidden = true;
+          }, 420);
+        }
+
+        function titleReady() {
+          state.titleReady = true;
+          // heroTitleText = 50% ของงานทั้งหมด
+          if (state.value < 50) setValue(50);
+          start();
+          if (state.imageReady) complete();
+        }
+
+        function imageLoading(url) {
+          var normalized = String(url || '').trim();
+          if (normalized && normalized !== state.imageUrl) {
+            state.imageUrl = normalized;
+            state.imageReady = false;
+            // ถ้ากำลังเปลี่ยนรูปใหม่หลังจากเคยครบ 100% ให้เริ่มนับส่วนรูปใหม่
+            if (state.value >= 100) state.value = state.titleReady ? 50 : 0;
+          }
+          start();
+        }
+
+        function imageReady(url) {
+          var normalized = String(url || '').trim();
+          if (normalized && state.imageUrl && normalized !== state.imageUrl) return;
+          if (normalized) state.imageUrl = normalized;
+          state.imageReady = true;
+          // รูป Hero = อีก 50% ของงานทั้งหมด
+          if (!state.titleReady && state.value < 50) setValue(50);
+          start();
+          if (state.titleReady) complete();
+        }
+
+        window.LP360HeroProgress = {
+          start: start,
+          titleReady: titleReady,
+          imageLoading: imageLoading,
+          imageReady: imageReady,
+          getState: function () {
+            return {
+              titleReady: state.titleReady,
+              imageReady: state.imageReady,
+              imageUrl: state.imageUrl,
+              value: state.value
+            };
+          }
+        };
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', start, { once: true });
+        } else {
+          start();
+        }
+      })();
+
+      function showHeroProgress(url) {
+        if (window.LP360HeroProgress) window.LP360HeroProgress.imageLoading(url);
+      }
+
+      function finishHeroProgress(url) {
+        if (window.LP360HeroProgress) window.LP360HeroProgress.imageReady(url);
+      }
+
+      function startHero(url) {
+        if (!url) {
+          if (window.LP360HeroProgress) window.LP360HeroProgress.imageReady('');
+          return;
+        }
+        window.__SITE_HERO_FAST_URL = url;
+        showHeroProgress(url);
+        var img = new Image();
+        try { img.fetchPriority = 'high'; img.decoding = 'async'; } catch (_) {}
+        img.onload = function () {
+          var apply = function () {
+            var overlay = document.getElementById('websiteHeroOverlay');
+            if (!overlay) return;
+            if (window.__SITE_HERO_FAST_URL !== url) return;
+            overlay.style.backgroundImage = 'linear-gradient(90deg,rgba(5,28,44,.96) 0%,rgba(5,28,44,.79) 40%,rgba(5,28,44,.1) 78%),url("' + url.replace(/"/g, '%22') + '")';
+            overlay.style.backgroundSize = 'cover';
+            overlay.style.backgroundPosition = 'center';
+            overlay.style.backgroundRepeat = 'no-repeat';
+            overlay.classList.add('website-hero-ready');
+            finishHeroProgress(url);
+          };
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once: true });
+          else apply();
+        };
+        img.onerror = function () {
+          var apply = function () {
+            var overlay = document.getElementById('websiteHeroOverlay');
+            if (!overlay) return;
+            overlay.classList.add('website-hero-ready');
+            finishHeroProgress(url);
+          };
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once: true });
+          else apply();
+        };
+        img.src = url;
+      }
+
+      var cachedHero = '';
+      try { cachedHero = localStorage.getItem(heroKey) || ''; } catch (_) {}
+      if (cachedHero) { preloadImage(cachedHero); startHero(cachedHero); }
+
+      // Critical request ใช้เฉพาะครั้งแรก/โหมดผู้ดูแล; ครั้งถัดไปใช้ Hero cache ทันที
+      window.__SITE_HOMECRITICAL_PREFETCH = (!cachedHero || admin) ? fetch(API + '?mode=homecritical', {
+        method: 'GET', cache: 'default', credentials: 'omit'
+      }).then(function (response) {
+        return response.ok ? response.json() : null;
+      }).then(function (result) {
+        var data = result && result.success !== false ? (result.data || result) : null;
+        if (!data) return result;
+        var hero = optimizedImage(data.heroImage, 1800);
+        if (hero) {
+          preloadImage(hero);
+          startHero(hero);
+          try { localStorage.setItem(heroKey, hero); } catch (_) {}
+        }
+        return result;
+      }).catch(function () { return null; }) : Promise.resolve(null);
 
       function hasUsable(storage) {
         if (!storage) return false;
@@ -33,8 +277,7 @@
 
       var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var timer = controller ? setTimeout(function () { controller.abort(); }, 30000) : null;
-      window.__SITE_HOMEFAST_PREFETCH = fetch(
-        'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=homefast',
+      window.__SITE_HOMEFAST_PREFETCH = fetch(API + '?mode=homefast',
         { method: 'GET', cache: 'default', credentials: 'omit', signal: controller ? controller.signal : undefined }
       ).then(function (response) {
         return response.ok ? response.json() : null;
@@ -48,8 +291,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
   #websiteHeroOverlay {
-    opacity: 0;
-    visibility: hidden;
+    opacity: 1;
+    visibility: visible;
+    background: linear-gradient(90deg,rgba(5,28,44,.96) 0%,rgba(5,28,44,.79) 40%,rgba(5,28,44,.1) 78%);
   }
 
   #websiteHeroOverlay.website-hero-ready {
@@ -58,13 +302,65 @@
     transition: opacity 0.25s ease;
   }
 
+  #websiteHeroOverlay .hero-image-progress-wrap {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    width: min(320px, calc(100% - 48px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 14px 34px rgba(0,0,0,.2);
+    z-index: 2;
+  }
+
+  #websiteHeroOverlay .hero-image-progress-wrap[hidden] {
+    display: none !important;
+  }
+
+  #websiteHeroOverlay .hero-image-progress-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  #websiteHeroOverlay .hero-image-progress-percent {
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+
+  #websiteHeroOverlay .hero-image-progress-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+
+  #websiteHeroOverlay .hero-image-progress-bar {
+    width: 100%;
+    height: 18px;
+    accent-color: #7da2ff;
+  }
+
     /* ลดงาน layout/paint ของส่วนล่างที่ยังไม่อยู่ในจอ */
     #learningSourceBox, #activityBox, #FBpostBox, #cliproomBox, #learningBaseModule {
       content-visibility: auto;
       contain-intrinsic-size: 1px 620px;
     }
 </style>
-  <link rel="stylesheet" href="index-fast-core.css?v=20260911-login-design-1">
+  <link rel="stylesheet" href="index-fast-core.css?v=20260915-announcement-click-visible-2">
   <link rel="stylesheet" href="button-section.css?v=20260904-buttonsection-preview-active-3">
   <style>
     #learningBaseModule.shopactivity-preview{padding:52px 0;background:linear-gradient(145deg,#f4f7fb,#fff 55%,#eff5ff)}
@@ -107,7 +403,7 @@
     <div class="admin-storage-meter" id="adminStorageMeter" aria-label="พื้นที่จัดเก็บไฟล์ของผู้ดูแล">
       <div class="admin-storage-labels">
         <span id="adminStorageUsed">กำลังตรวจสอบพื้นที่...</span>
-        <span id="adminStorageLimit">100 GB</span>
+        <span id="adminStorageLimit">กำลังโหลด...</span>
       </div>
       <div
         class="admin-storage-track"
@@ -332,7 +628,7 @@
           <div class="admin-news-info-note admin-only"><i class="fa-solid fa-circle-info" aria-hidden="true"></i>เข้าหน้าเพจแต่ละรายการเพื่อเพิ่มข้อมูล</div>
           <aside id="bossBox" class="boss-box" hidden aria-live="polite">
             <div class="boss-photo-wrap">
-              <img id="bossPhoto" class="boss-photo" src="" alt="รูปผู้บริหาร">
+              <img id="bossPhoto" class="boss-photo" src="" alt="รูปผู้บริหาร" loading="lazy" decoding="async" fetchpriority="low">
             </div>
             <div class="boss-text">
               <div id="bossName" class="boss-name"></div>
@@ -365,6 +661,7 @@
               <img
                 id="studentServicesBanner"
                 class="student-services-login-banner"
+                loading="lazy" decoding="async" fetchpriority="low"
                 alt="ภาพระบบช่วยเหลือผู้เรียน"
                 hidden>
             </div>
@@ -374,6 +671,7 @@
                 <img
                   id="studentServicesLogo"
                   class="student-services-login-logo"
+                  loading="lazy" decoding="async"
                   alt="โลโก้ระบบช่วยเหลือผู้เรียน">
               </div>
 
@@ -675,7 +973,7 @@
   </footer>
 
 <script defer src="button-section.js?v=20260904-buttonsection-preview-active-3"></script>
-<script defer src="index-fast.js?v=20260912-performance-resilient-1"></script>
+<script defer src="index-fast.js?v=20260917-hero-title-image-v2"></script>
 
 <!-- Student Modal -->
 <div id="studentModal" class="learning-modal">

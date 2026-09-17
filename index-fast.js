@@ -4,14 +4,14 @@
 (() => {
   'use strict';
 
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API_URL = window.APP_CONFIG.EXEC_URL;
 
   // PERFORMANCE/RESILIENCE V10
   // - cache-first + stale-while-revalidate
   // - deduplicate requests
   // - limit parallel Apps Script reads to avoid cold-start congestion
   // - retry transient read failures until the connection succeeds
-  const HOMEFAST_CACHE_KEY = 'homefast-v10-resilient-20260912';
+  const HOMEFAST_CACHE_KEY = 'homefast-v13-first-image-20260917';
   const HOMEFAST_TTL = 5 * 60 * 1000;
   const HOMEFAST_STALE_TTL = 24 * 60 * 60 * 1000;
   const NETWORK_TIMEOUT = 45 * 1000;
@@ -25,14 +25,14 @@
   let homeFastPromise = null;
 
   function isAdminMode() {
-    try { return Boolean(sessionStorage.getItem('mysiteAdminToken')); }
+    try { return Boolean(sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken')); }
     catch (_) { return false; }
   }
 
   function storageRead(storage, key, maxAgeMs) {
     if (!storage || !key || !maxAgeMs || isAdminMode()) return null;
     try {
-      const saved = JSON.parse(storage.getItem('SITE_FAST:' + key) || 'null');
+      const saved = JSON.parse(storage.getItem('LP360:DISTRICT:SITE_FAST:' + key) || 'null');
       if (!saved || !saved.savedAt || Date.now() - saved.savedAt > maxAgeMs) return null;
       return saved;
     } catch (_) { return null; }
@@ -46,8 +46,47 @@
   function writeCache(key, data) {
     if (!key || isAdminMode()) return;
     const payload = JSON.stringify({ savedAt: Date.now(), data });
-    try { sessionStorage.setItem('SITE_FAST:' + key, payload); } catch (_) {}
-    try { localStorage.setItem('SITE_FAST:' + key, payload); } catch (_) {}
+    try { sessionStorage.setItem('LP360:DISTRICT:SITE_FAST:' + key, payload); } catch (_) {}
+    try { localStorage.setItem('LP360:DISTRICT:SITE_FAST:' + key, payload); } catch (_) {}
+  }
+
+  // FIRST-LOAD IMAGE OPTIMIZER
+  // Google Drive/lh3 รูปต้นฉบับอาจมีหลาย MB: ขอขนาดที่เหมาะกับตำแหน่งแสดงผล
+  function fastImageUrl(value, width = 1200) {
+    const url = String(value || '').trim();
+    if (!url) return '';
+    const size = Math.max(96, Math.min(2400, Number(width) || 1200));
+    let match = url.match(/lh3\.googleusercontent\.com\/d\/([-\w]{25,})/i);
+    if (!match && /drive\.google\.com/i.test(url)) match = url.match(/[-\w]{25,}/);
+    if (!match) return url;
+    return `https://lh3.googleusercontent.com/d/${match[1]}=w${Math.round(size)}`;
+  }
+
+  function optimizeHomeFastPayload(payload) {
+    const root = payload && payload.data && typeof payload.data === 'object' ? payload.data : payload;
+    if (!root || typeof root !== 'object') return payload;
+
+    if (root.images) {
+      root.images.brandIcon = fastImageUrl(root.images.brandIcon, 320);
+      root.images.heroImage = fastImageUrl(root.images.heroImage, 1800);
+      if (Array.isArray(root.images.settingMenus)) {
+        root.images.settingMenus.forEach(item => { if (item) item.icon = fastImageUrl(item.icon, 320); });
+      }
+    }
+    const slides = root.news && Array.isArray(root.news.slides) ? root.news.slides : [];
+    slides.forEach(item => { if (item) item.image = fastImageUrl(item.image, 1200); });
+    if (Array.isArray(root.activity)) {
+      root.activity.forEach(item => { if (item) item.image = fastImageUrl(item.image, 900); });
+    }
+    if (root.boss) {
+      root.boss.image = fastImageUrl(root.boss.image, 640);
+      root.boss.popupImage = fastImageUrl(root.boss.popupImage, 1400);
+    }
+    if (root.studentLogin) {
+      root.studentLogin.logo = fastImageUrl(root.studentLogin.logo, 360);
+      root.studentLogin.banner = fastImageUrl(root.studentLogin.banner, 1200);
+    }
+    return payload;
   }
 
   function sleep(ms) {
@@ -208,13 +247,13 @@
 
     const fresh = readCache(HOMEFAST_CACHE_KEY, HOMEFAST_TTL);
     if (fresh) {
-      homeFastPromise = Promise.resolve(fresh.data);
+      homeFastPromise = Promise.resolve(optimizeHomeFastPayload(fresh.data));
       return homeFastPromise;
     }
 
     const stale = readCache(HOMEFAST_CACHE_KEY, HOMEFAST_STALE_TTL);
     if (stale) {
-      homeFastPromise = Promise.resolve(stale.data);
+      homeFastPromise = Promise.resolve(optimizeHomeFastPayload(stale.data));
       refreshHomeFastInBackground();
       return homeFastPromise;
     }
@@ -234,8 +273,9 @@
 
     homeFastPromise = request
       .then(result => {
-        writeCache(HOMEFAST_CACHE_KEY, result);
-        return result;
+        const optimized = optimizeHomeFastPayload(result);
+        writeCache(HOMEFAST_CACHE_KEY, optimized);
+        return optimized;
       })
       .catch(error => {
         homeFastPromise = null;
@@ -337,7 +377,7 @@
     [window.sessionStorage, window.localStorage].forEach(storage => {
       try {
         Object.keys(storage).forEach(key => {
-          if (!key.startsWith('SITE_FAST:')) return;
+          if (!key.startsWith('LP360:DISTRICT:SITE_FAST:')) return;
           if (!prefix || key.includes(prefix)) storage.removeItem(key);
         });
       } catch (_) {}
@@ -353,7 +393,8 @@
     homePart,
     whenNear,
     clear,
-    networkJson
+    networkJson,
+    imageUrl: fastImageUrl
   };
 
   getHomeFast().catch(error => console.warn('homefast initial:', error));
@@ -364,7 +405,7 @@
   'use strict';
 
   const WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
   const IMAGE_API_URL = WEB_APP_URL + '?mode=images';
 
   const NEWS_API_URL = WEB_APP_URL + '?mode=news';
@@ -422,6 +463,60 @@
     if (event.key === 'Escape') closeMainNavDropdowns();
   });
 
+function getHeroOverlayProgressState(overlay) {
+  if (!overlay) return null;
+  if (overlay.__heroOverlayProgressState) {
+    return overlay.__heroOverlayProgressState;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'hero-image-progress-wrap';
+  wrap.setAttribute('aria-live', 'polite');
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="hero-image-progress-row">
+      <span class="hero-image-progress-label">Loading...</span>
+      <strong class="hero-image-progress-percent">0%</strong>
+    </div>
+    <progress class="hero-image-progress-bar" max="100" value="0">0%</progress>
+  `;
+
+  overlay.appendChild(wrap);
+
+  overlay.__heroOverlayProgressState = {
+    wrap,
+    progress: wrap.querySelector('progress'),
+    timer: null,
+    value: 0,
+    hideTimer: null
+  };
+
+  return overlay.__heroOverlayProgressState;
+}
+
+function showHeroOverlayProgress(overlay, imageUrl) {
+  if (window.LP360HeroProgress) {
+    window.LP360HeroProgress.imageLoading(imageUrl);
+    return;
+  }
+  const state = getHeroOverlayProgressState(overlay);
+  if (!state) return;
+  state.wrap.hidden = false;
+}
+
+function finishHeroOverlayProgress(overlay, imageUrl) {
+  if (window.LP360HeroProgress) {
+    window.LP360HeroProgress.imageReady(imageUrl);
+    return;
+  }
+  const state = getHeroOverlayProgressState(overlay);
+  if (!state) return;
+  state.progress.value = 100;
+  const percent = state.wrap.querySelector('.hero-image-progress-percent');
+  if (percent) percent.textContent = '100%';
+  setTimeout(() => { state.wrap.hidden = true; }, 420);
+}
+
 async function loadWebsiteImages() {
   try {
     let result;
@@ -476,7 +571,7 @@ async function loadWebsiteImages() {
         .forEach(icon => {
           icon.textContent = '';
           icon.style.backgroundImage =
-            `url("${brandIconUrl}")`;
+            `url("${window.SiteFast?.imageUrl ? window.SiteFast.imageUrl(brandIconUrl, 320) : brandIconUrl}")`;
 
           icon.style.backgroundSize = 'cover';
           icon.style.backgroundPosition = 'center';
@@ -498,7 +593,14 @@ if (heroOverlayUrl) {
   const overlay = document.getElementById('websiteHeroOverlay');
 
   if (overlay) {
+    const heroFastUrl = window.SiteFast?.imageUrl
+      ? window.SiteFast.imageUrl(heroOverlayUrl, 1800)
+      : heroOverlayUrl;
     const heroImage = new Image();
+    heroImage.fetchPriority = 'high';
+    heroImage.decoding = 'async';
+
+    showHeroOverlayProgress(overlay, heroFastUrl);
 
     heroImage.onload = () => {
       overlay.style.backgroundImage =
@@ -508,21 +610,28 @@ if (heroOverlayUrl) {
           rgba(5,28,44,.79) 40%,
           rgba(5,28,44,.1) 78%
         ),
-        url("${heroOverlayUrl}")`;
+        url("${heroFastUrl}")`;
 
       overlay.style.backgroundSize = 'cover';
       overlay.style.backgroundPosition = 'center';
       overlay.style.backgroundRepeat = 'no-repeat';
 
       overlay.classList.add('website-hero-ready');
+      finishHeroOverlayProgress(overlay, heroFastUrl);
     };
 
     heroImage.onerror = () => {
       overlay.classList.add('website-hero-ready');
+      finishHeroOverlayProgress(overlay, heroFastUrl);
     };
 
-    heroImage.src = heroOverlayUrl;
+    heroImage.src = heroFastUrl;
   }
+}
+
+if (!heroOverlayUrl && window.LP360HeroProgress) {
+  // ไม่มีรูปที่กำหนดก็ถือว่างานส่วนรูปจบแล้ว เพื่อไม่ให้ progress ค้าง
+  window.LP360HeroProgress.imageReady('');
 }
 
 function renderMainNavMenus(data) {
@@ -663,6 +772,8 @@ function renderSettingMenus(items) {
       'โหลด URL รูปภาพเว็บไซต์ไม่สำเร็จ:',
       error
     );
+    // request รูปจบด้วย error ก็ถือว่างานส่วนรูปจบ เพื่อไม่ให้ Hero progress ค้าง
+    window.LP360HeroProgress?.imageReady('');
   }
 }
 
@@ -994,7 +1105,7 @@ async function openNewsPopup(item) {
   'use strict';
 
   const API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
 
   function safeUrl(value) {
     try {
@@ -1018,6 +1129,60 @@ async function openNewsPopup(item) {
     return Boolean(url);
   }
 
+  function enableAnnouncementLink(element, value) {
+    if (!element) return;
+
+    const url = safeUrl(value);
+    if (!url) {
+      delete element.dataset.announcementUrl;
+      element.removeAttribute('role');
+      element.removeAttribute('tabindex');
+      element.removeAttribute('aria-label');
+      element.style.cursor = '';
+      return;
+    }
+
+    element.dataset.announcementUrl = url;
+    element.setAttribute('role', 'link');
+    element.setAttribute('tabindex', '0');
+    element.setAttribute('aria-label', 'เปิดเว็บไซต์ที่กำหนด');
+    element.style.cursor = 'pointer';
+
+    if (element.dataset.announcementLinkReady === '1') return;
+    element.dataset.announcementLinkReady = '1';
+
+    const openInSameTab = function () {
+      const target = safeUrl(element.dataset.announcementUrl);
+      if (target) window.location.assign(target);
+    };
+
+    element.addEventListener('click', openInSameTab);
+    element.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openInSameTab();
+      }
+    });
+  }
+
+
+  async function fetchCentralAnnouncement() {
+    const url = new URL(API_URL);
+    url.searchParams.set('mode', 'announcement');
+    url.searchParams.set('_ts', String(Date.now()));
+    const response = await fetch(url.toString(), { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    if (!result || result.success === false) {
+      throw new Error(result?.message || 'โหลด announcement กลางไม่สำเร็จ');
+    }
+    const data = result.data || result;
+    return {
+      text: String(data.text || data.announcementText || '').trim(),
+      url: String(data.url || data.announcementUrl || '').trim()
+    };
+  }
+
   async function loadAnnouncement() {
     const announcement = document.getElementById('announcementText');
     const socials = document.getElementById('announcementSocials');
@@ -1039,19 +1204,36 @@ async function openNewsPopup(item) {
       }
 
       const contact = result.contact || {};
-      const organization = String(contact.organization || '').trim();
+      let announcementMessage = String(contact.announcementText || '').trim();
+      let announcementUrl = String(contact.announcementUrl || '').trim();
+
+      // ถ้า homefast/about cache เป็นข้อมูลรุ่นเก่า ให้ fallback ไปอ่าน B24/D24 สดจากฐานกลาง
+      if (!announcementMessage || !announcementUrl) {
+        try {
+          const central = await fetchCentralAnnouncement();
+          if (!announcementMessage) announcementMessage = central.text;
+          if (!announcementUrl) announcementUrl = central.url;
+        } catch (fallbackError) {
+          console.warn('announcement central fallback:', fallbackError);
+        }
+      }
 
       if (announcement) {
-        announcement.textContent = organization;
-        announcement.hidden = !organization;
+        announcement.textContent = announcementMessage;
+        announcement.hidden = !announcementMessage;
       }
+
+      enableAnnouncementLink(announcement, announcementUrl);
 
       const hasLine = setSocial('announcementLine', contact.line);
       const hasFacebook = setSocial('announcementFacebook', contact.facebook);
       if (socials) socials.hidden = !(hasLine || hasFacebook);
     } catch (error) {
       console.error('loadAnnouncement error:', error);
-      if (announcement) announcement.hidden = true;
+      if (announcement) {
+        announcement.hidden = true;
+        enableAnnouncementLink(announcement, '');
+      }
       if (socials) socials.hidden = true;
     }
   }
@@ -1065,7 +1247,7 @@ async function openNewsPopup(item) {
   'use strict';
 
   const API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
   const SEARCH_PAGES = [
     'activity.html', 'best_practice.html', 'classroom.html', 'cliproom.html',
     'contact.html', 'course.html', 'ex.html', 'innovation.html', 'learning.html',
@@ -1117,6 +1299,7 @@ async function openNewsPopup(item) {
 
       setOptionalText('heroKickerText', hero.kicker);
       setOptionalText('heroTitleText', hero.title);
+      window.LP360HeroProgress?.titleReady();
       setOptionalText('heroDescriptionText', hero.description);
       setOptionalText('footerDescription', footer.description);
       setOptionalText('footerOrganization', footer.organization);
@@ -1124,6 +1307,7 @@ async function openNewsPopup(item) {
       setOptionalText('footerPhone', footer.phone, 'โทร. ');
     } catch (error) {
       console.error('loadSiteContent error:', error);
+      window.LP360HeroProgress?.titleReady();
     }
   }
 
@@ -1218,12 +1402,12 @@ async function openNewsPopup(item) {
 /* ===== admin-mode.js ===== */
 (() => {
   'use strict';
-  const API_URL='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API_URL=window.APP_CONFIG.EXEC_URL;
   const CSS_FILES=['edit-website.css?v=20260827-2','news-manager.css?v=20260902-newsurl-optional-2','newsletter-manager.css?v=20260826-1','newsletter-overlay.css?v=20260826-3','facebook-manager.css?v=20260826-1'];
   const JS_FILES=['edit-website.js?v=20260827-2','news-manager.js?v=20260902-newsurl-optional-2','newsletter-manager.js?v=20260826-4','facebook-manager.js?v=20260826-2'];
   let toolsPromise=null;
   let storagePromise=null;
-  const STORAGE_CACHE_KEY='mysiteAdminStorageV1';
+  const STORAGE_CACHE_KEY='LP360:DISTRICT:mysiteAdminStorageV2D15';
   const STORAGE_CACHE_MS=5*60*1000;
   const $=id=>document.getElementById(id);
   async function api(payload){const response=await fetch(API_URL,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});if(!response.ok)throw new Error(`HTTP ${response.status}`);const result=await response.json();if(!result.success)throw new Error(result.message||'ดำเนินการไม่สำเร็จ');return result}
@@ -1245,7 +1429,7 @@ async function openNewsPopup(item) {
     const maxBytes=Math.max(1,Number(data&&data.limitBytes)||100*1024*1024*1024);
     const percent=Math.min(100,Math.max(0,(bytes/maxBytes)*100));
     used.textContent='ใช้พื้นที่แล้ว '+formatStorageGb(bytes);
-    limit.textContent=(data&&data.limitLabel)||'100 GB';
+    limit.textContent=(data&&data.limitLabel)||'—';
     fill.style.width=percent.toFixed(2)+'%';
     track.setAttribute('aria-valuenow',String(Math.round(percent)));
     track.setAttribute('aria-valuetext',used.textContent+' จาก '+limit.textContent);
@@ -1256,7 +1440,7 @@ async function openNewsPopup(item) {
   }
   function writeStorageCache(data){try{sessionStorage.setItem(STORAGE_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data}))}catch(_){}}
   function loadAdminStorage(force=false){
-    const token=sessionStorage.getItem('mysiteAdminToken');
+    const token=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken');
     if(!token)return Promise.resolve();
     const cached=!force&&readStorageCache();
     if(cached)renderAdminStorage(cached,'ready');else renderAdminStorage(null,'loading');
@@ -1275,23 +1459,23 @@ async function openNewsPopup(item) {
   function openLogin(){ $('adminLoginStatus').textContent='';$('adminLoginModal').hidden=false;setTimeout(()=>$('adminUsername').focus(),30) }
   function closeLogin(){ $('adminLoginModal').hidden=true }
   $('adminLoginButton').addEventListener('click',openLogin);$('adminLoginClose').addEventListener('click',closeLogin);$('adminLoginModal').addEventListener('click',e=>{if(e.target===$('adminLoginModal'))closeLogin()});
-  $('adminLoginForm').addEventListener('submit',async event=>{event.preventDefault();const status=$('adminLoginStatus'),submit=$('adminLoginSubmit');status.textContent='';submit.disabled=true;submit.textContent='กำลังตรวจสอบ...';try{const result=await api({mode:'adminlogin',username:$('adminUsername').value.trim(),password:$('adminPassword').value});sessionStorage.setItem('mysiteAdminToken',result.token);sessionStorage.setItem('mysiteAdminName',result.username||'Admin');submit.textContent='กำลังโหลดเครื่องมือ...';await activateAdmin()}catch(error){sessionStorage.removeItem('mysiteAdminToken');status.textContent=error.message}finally{submit.disabled=false;submit.textContent='เข้าสู่ระบบ'}});
+  $('adminLoginForm').addEventListener('submit',async event=>{event.preventDefault();const status=$('adminLoginStatus'),submit=$('adminLoginSubmit');status.textContent='';submit.disabled=true;submit.textContent='กำลังตรวจสอบ...';try{const result=await api({mode:'adminlogin',username:$('adminUsername').value.trim(),password:$('adminPassword').value});sessionStorage.setItem('LP360:DISTRICT:mysiteAdminToken',result.token);sessionStorage.setItem('LP360:DISTRICT:mysiteAdminName',result.username||'Admin');submit.textContent='กำลังโหลดเครื่องมือ...';await activateAdmin()}catch(error){sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminToken');status.textContent=error.message}finally{submit.disabled=false;submit.textContent='เข้าสู่ระบบ'}});
   $('adminForgotButton').addEventListener('click',async()=>{const modal=await Swal.fire({title:'ลืมรหัสผ่าน',input:'email',inputLabel:'กรอก Email ที่ลงทะเบียนไว้',showCancelButton:true,confirmButtonText:'ส่งข้อมูลเข้าสู่ Email',cancelButtonText:'ยกเลิก',confirmButtonColor:'#dc2626',inputValidator:value=>!value?'กรุณากรอก Email':undefined});if(!modal.isConfirmed)return;Swal.fire({title:'กำลังส่ง Email...',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});try{await api({mode:'adminforgot',email:modal.value.trim()});Swal.fire({icon:'success',title:'ส่ง Email แล้ว',text:'กรุณาตรวจสอบกล่องจดหมายและจดหมายขยะ'})}catch(error){Swal.fire({icon:'error',title:'ส่งไม่สำเร็จ',text:error.message})}});
   $('adminTogglePassword').addEventListener('click',event=>{const input=$('adminPassword');input.type=input.type==='password'?'text':'password';event.currentTarget.querySelector('i').className=input.type==='password'?'fa-solid fa-eye':'fa-solid fa-eye-slash'});
-  $('adminLogoutButton').addEventListener('click',()=>{sessionStorage.removeItem('mysiteAdminToken');sessionStorage.removeItem('mysiteAdminName');setAdminUi(false);if(window.Swal)Swal.close()});
-  const existingToken=sessionStorage.getItem('mysiteAdminToken');
+  $('adminLogoutButton').addEventListener('click',()=>{sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminToken');sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminName');setAdminUi(false);if(window.Swal)Swal.close()});
+  const existingToken=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken');
   if(existingToken){
     api({mode:'editwebsite',editor:'text',token:existingToken})
       .then(()=>loadAdminTools())
       .then(()=>{setAdminUi(true);loadAdminStorage(false)})
-      .catch(()=>{sessionStorage.removeItem('mysiteAdminToken');sessionStorage.removeItem('mysiteAdminName');setAdminUi(false)});
+      .catch(()=>{sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminToken');sessionStorage.removeItem('LP360:DISTRICT:mysiteAdminName');setAdminUi(false)});
   }else setAdminUi(false);
 })();
 
 
 /* ===== admin-section-guide.js ===== */
 (()=>{'use strict';
-const API='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+const API=window.APP_CONFIG.EXEC_URL;
 const builtins=[
   {id:'studentServicesBox',kind:'builtin',title:'บริการนักศึกษา',visible:true},
   {id:'userBox',kind:'builtin',title:'รายการ User',visible:true},
@@ -1350,7 +1534,7 @@ async function getLayout(){
   return normalize(j.items);
 }
 async function apiAdmin(action,data){
-  const token=sessionStorage.getItem('mysiteAdminToken')||'';
+  const token=sessionStorage.getItem('LP360:DISTRICT:mysiteAdminToken')||'';
   const r=await fetch(API,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({mode:'sectionlayoutadmin',action,token,data:data||{}})}),j=await r.json();
   if(!r.ok||!j.success)throw new Error(j.message||'ดำเนินการไม่สำเร็จ');
   return j.data||{};
@@ -1540,7 +1724,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   'use strict';
 
   const API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
 
   const fields = {
     userTotal: 'userTotalBox',
@@ -1721,7 +1905,7 @@ window.STUDENT_PROFILE_WEB_APP_URL =
      * เพียงครั้งเดียว จึงไม่มี REQUEST_TIMEOUT/JSONP ที่ตัดการทำงานกลางทาง
      */
     try {
-      sessionStorage.setItem('SSS_PROFILE_ROLLNO', rollno);
+      sessionStorage.setItem('LP360:DISTRICT:SSS_PROFILE_ROLLNO', rollno);
     } catch (_) {}
 
     const profileUrl = `profile.html?rollno=${encodeURIComponent(rollno)}`;
@@ -1752,11 +1936,11 @@ window.STUDENT_PROFILE_WEB_APP_URL =
 
   // Web App เดิมของระบบหลัก (ไม่ต้องสร้าง Apps Script แยก)
   const STUDENT_SERVICE_API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
 
   const LEVELS = ['ประถม', 'ม.ต้น', 'ม.ปลาย'];
   const MEDALS = ['🥇1', '🥈2', '🥉3'];
-  const CACHE_KEY = 'studentServiceTop3:v1';
+  const CACHE_KEY = 'LP360:DISTRICT:studentServiceTop3:v1';
   const CACHE_AGE = 5 * 60 * 1000;
   const AUTO_ROTATE_DELAY = 4000;
   let rankingData = null;
@@ -1922,7 +2106,7 @@ window.STUDENT_PROFILE_WEB_APP_URL =
   'use strict';
 
   const WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
   const API_URL = WEB_APP_URL + '?mode=usercards';
   let users = [];
   let currentIndex = 0;
@@ -2091,7 +2275,7 @@ window.STUDENT_PROFILE_WEB_APP_URL =
   'use strict';
 
 const WEB_APP_URL =
-  'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  window.APP_CONFIG.EXEC_URL;
 
   const INITIAL_ITEMS = 8;
   const $ = id => document.getElementById(id);
@@ -2432,7 +2616,7 @@ function areaCard(area) {
   'use strict';
 
   const ACTIVITY_API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=activity';
+    window.APP_CONFIG.EXEC_URL + '?mode=activity';
 
   const state = {
     items: []
@@ -2591,7 +2775,7 @@ state.items = (result.activities || [])
 (() => {
   'use strict';
 
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec?mode=facebook';
+  const API_URL = window.APP_CONFIG.EXEC_URL + '?mode=facebook';
   const MAX_HOME_ITEMS = 4;
 
   const esc = value => String(value ?? '')
@@ -2755,7 +2939,7 @@ state.items = (result.activities || [])
   'use strict';
 
   const BOSS_WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
   const BOSS_API_URL = BOSS_WEB_APP_URL + '?mode=boss';
 
   const text = value => String(value ?? '').trim();
@@ -2907,10 +3091,10 @@ state.items = (result.activities || [])
 (() => {
   'use strict';
 
-  const MAIN_API_URL = 'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
-  const EXEC_CACHE_KEY = 'SITE_FAST:cliproom-exec-v3';
+  const MAIN_API_URL = window.APP_CONFIG.EXEC_URL;
+  const EXEC_CACHE_KEY = 'LP360:DISTRICT:SITE_FAST:cliproom-exec-v3';
   const EXEC_CACHE_AGE = 10 * 60 * 1000;
-  const CATALOG_CACHE_KEY = 'SITE_FAST:cliproom-catalog-v3-dynamic-exec';
+  const CATALOG_CACHE_KEY = 'LP360:DISTRICT:SITE_FAST:cliproom-catalog-v3-dynamic-exec';
   const CATALOG_STALE_AGE = 24 * 60 * 60 * 1000;
   const JSONP_TIMEOUT = 45 * 1000;
   const RETRY_DELAYS = [1000, 1800, 3200, 6000, 10000, 16000, 30000];
@@ -3210,7 +3394,7 @@ state.items = (result.activities || [])
 /* ===== shopactivity-box.js ===== */
 (() => {
   'use strict';
-  const API_URL='https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API_URL=window.APP_CONFIG.EXEC_URL;
   const track=document.getElementById('shopActivityTrack');if(!track)return;
   let items=[],page=0,perPage=3,timer=null;
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
@@ -3229,9 +3413,9 @@ state.items = (result.activities || [])
 (() => {
   'use strict';
 
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+  const API_URL = window.APP_CONFIG.EXEC_URL;
   const TEACHER_URL = API_URL + '?page=teacher';
-  let student = JSON.parse(localStorage.getItem('LEARN_STUDENT') || 'null');
+  let student = JSON.parse(localStorage.getItem('LP360:DISTRICT:LEARN_STUDENT') || 'null');
   let editProfileRemovePhoto = false;
   let activities = [];
   let currentActivityTarget = 'all';
@@ -3540,7 +3724,7 @@ if (!fullname || !phone) {
     student = res.student;
 
     localStorage.setItem(
-      'LEARN_STUDENT',
+      'LP360:DISTRICT:LEARN_STUDENT',
       JSON.stringify(student)
     );
 
@@ -3644,7 +3828,7 @@ if (!fullname || !phone) {
 
       // ถือว่าลงทะเบียนสำเร็จ = เข้าสู่ระบบทันที
       student = res.student;
-      localStorage.setItem('LEARN_STUDENT', JSON.stringify(student));
+      localStorage.setItem('LP360:DISTRICT:LEARN_STUDENT', JSON.stringify(student));
       closeModal('studentModal');
       clearStudentPhoto();
       updateTop();
@@ -3671,7 +3855,7 @@ if (!fullname || !phone) {
       Swal.close();
       if (!res.ok) return Swal.fire('แจ้งเตือน',res.message,'warning');
       student = res.student;
-      localStorage.setItem('LEARN_STUDENT',JSON.stringify(student));
+      localStorage.setItem('LP360:DISTRICT:LEARN_STUDENT',JSON.stringify(student));
       closeModal('studentModal'); updateTop();
       Swal.fire('สำเร็จ',res.message,'success');
     } catch(err) { Swal.close(); Swal.fire('ผิดพลาด',err.message,'error'); }
@@ -4070,7 +4254,7 @@ async function loadMyTotalHours() {
     }).then(r=>{
       if(!r.isConfirmed)return;
       student=null;
-      localStorage.removeItem('LEARN_STUDENT');
+      localStorage.removeItem('LP360:DISTRICT:LEARN_STUDENT');
       closeEditProfile();
       closeModal('studentModal');
       updateTop();
@@ -4080,7 +4264,7 @@ async function loadMyTotalHours() {
   }
 
   function closeStudentModal() {
-    Swal.fire({title:'ออกจากระบบ?',icon:'warning',showCancelButton:true,confirmButtonText:'ออกจากระบบ',cancelButtonText:'ยกเลิก'}).then(r=>{if(!r.isConfirmed)return;student=null;localStorage.removeItem('LEARN_STUDENT');closeModal('studentModal');updateTop();showPage('activitiesPage',$('learningBaseModule').querySelector('.learning-tabs button'));});
+    Swal.fire({title:'ออกจากระบบ?',icon:'warning',showCancelButton:true,confirmButtonText:'ออกจากระบบ',cancelButtonText:'ยกเลิก'}).then(r=>{if(!r.isConfirmed)return;student=null;localStorage.removeItem('LP360:DISTRICT:LEARN_STUDENT');closeModal('studentModal');updateTop();showPage('activitiesPage',$('learningBaseModule').querySelector('.learning-tabs button'));});
   }
 
 
@@ -4212,7 +4396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   'use strict';
 
   const API_URL =
-    'https://script.google.com/macros/s/AKfycbxwqpydnQSx2aPrQ8yJAN3P9Jkjic-8nNIlOHYFRyarrtTyb26sE_USzXNS7uk478wh8w/exec';
+    window.APP_CONFIG.EXEC_URL;
 
   const FALLBACK_PHOTO =
     'https://static.wixstatic.com/media/a503e5_9064df4bf13044dab24382c889fa7d87~mv2.png';
@@ -4222,7 +4406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getStudent() {
     try {
       return JSON.parse(
-        localStorage.getItem('LEARN_STUDENT') || 'null'
+        localStorage.getItem('LP360:DISTRICT:LEARN_STUDENT') || 'null'
       );
     } catch (_) {
       return null;
@@ -4382,7 +4566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   window.addEventListener('storage', event => {
-    if (event.key === 'LEARN_STUDENT') {
+    if (event.key === 'LP360:DISTRICT:LEARN_STUDENT') {
       renderProfile();
     }
   });

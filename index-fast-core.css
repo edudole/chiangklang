@@ -2336,7 +2336,7 @@ body.admin-edit-mode .site-header {
   margin: 0;
   transform: translate(-50%, -50%);
   text-align: center;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 @media (max-width: 860px) {
